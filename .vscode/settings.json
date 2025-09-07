@@ -12,6 +12,10 @@
     },
     "files.associations": {
         "freertos.h": "c",
-        "esp_mac.h": "c"
+        "esp_mac.h": "c",
+        "task.h": "c",
+        "esp_check.h": "c",
+        "sdkconfig.h": "c",
+        "adc_oneshot.h": "c"
     }
 }

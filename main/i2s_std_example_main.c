@@ -1,14 +1,20 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
+#include <tgmath.h>
+
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
+
 #include "driver/i2s_std.h"
 #include "driver/gpio.h"
 #include "esp_check.h"
 #include "sdkconfig.h"
-#include <tgmath.h>
 
-#include <string.h>
+#include "esp_adc/adc_oneshot.h"
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_cali_scheme.h"
+
 
 #define BCLK   GPIO_NUM_4     
 #define WS      GPIO_NUM_46
@@ -207,18 +213,18 @@ void mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
     H_L_Buf[3] = lastYLow_1[0];
 }
 
-static void i2s_example_read_task(void *args)
+static void fiter(void *args)
 {
     int32_t *r_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *w_buf1 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     
-    int32_t *testBuf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    int32_t *w_buf2 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    // int32_t *testBuf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    // int32_t *w_buf2 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
 
     assert(r_buf); 
-    assert(w_buf2);
     assert(w_buf1);
-    assert(testBuf);
+    // assert(w_buf2);
+    // assert(testBuf);
 
     int32_t *M_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *H_L_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
@@ -232,7 +238,7 @@ static void i2s_example_read_task(void *args)
     ESP_ERROR_CHECK(i2s_channel_enable(rx_chan));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_1));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));
-    while (1) {
+    while (true) {
         if (i2s_channel_read(rx_chan, r_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
 
             pushNewX(r_buf);
@@ -262,7 +268,7 @@ static void i2s_example_read_task(void *args)
     vTaskDelete(NULL);
 }
 
-static void i2s_example_init_std_duplex(void)
+static void init_i2s(void)
 {
     //i2s_chan_config_t chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_SLAVE);
     i2s_chan_config_t d_chan_cfg = {
@@ -334,9 +340,57 @@ static void i2s_example_init_std_duplex(void)
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_chan_2, &s_cfg));
 }
 
+void init_channel(adc_oneshot_unit_handle_t handle, adc_channel_t channel){
+    adc_oneshot_unit_init_cfg_t  main_config1 = {
+        .unit_id = ADC_UNIT_1,
+    };
+    adc_oneshot_new_unit(&main_config1, &handle);
+
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_12,
+        .atten = ADC_ATTEN_DB_12,
+    };
+    adc_oneshot_config_channel(handle, ADC_CHANNEL_0, &config);
+}
+
+adc_oneshot_unit_handle_t main_handle;
+adc_oneshot_unit_handle_t high_handle;
+adc_oneshot_unit_handle_t mid_handle;
+adc_oneshot_unit_handle_t low_handle;
+
+void init_adc(){
+    init_channel(main_handle, ADC_CHANNEL_0);
+    init_channel(high_handle, ADC_CHANNEL_0);
+    init_channel(mid_handle, ADC_CHANNEL_0);
+    init_channel(low_handle, ADC_CHANNEL_0);
+}
+ 
+int16_t read_adc(adc_oneshot_unit_handle_t handle){
+    int16_t ret;
+    adc_oneshot_read(handle, ADC_CHANNEL_0, &ret);
+    return ret;
+}
+
+int16_t make_exponential(int16_t x){
+    return x *= pow((x/4096), 2);
+}
+
+int16_t main_volume;
+int16_t high_volume;
+int16_t mid_volume;
+int16_t low_volume;
+
+void get_volumes(){
+    main_volume = make_exponential(read_adc(main_handle));
+    high_volume = make_exponential(read_adc(high_handle));
+    mid_volume = make_exponential(read_adc(mid_handle));
+    low_volume = make_exponential(read_adc(low_handle));
+}
+
 void app_main(void)
 {    
-    i2s_example_init_std_duplex();
+    init_i2s();
+    init_adc();
     //xTaskCreate(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 0, NULL);
-    xTaskCreatePinnedToCore(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 0, NULL, 1);
+    xTaskCreatePinnedToCore(fiter, "filter", 4096, NULL, 0, NULL, 1);
 }
