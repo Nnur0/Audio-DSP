@@ -16,44 +16,48 @@
 #include "esp_adc/adc_cali_scheme.h"
 
 
-#define BCLK   GPIO_NUM_4     
-#define WS      GPIO_NUM_46
-#define DIN     GPIO_NUM_6
+#define BCLK   GPIO_NUM_4   // old: 4
+#define WS      GPIO_NUM_7     // old: 46
+#define DIN     GPIO_NUM_6      // old: 6
 
-#define DOUT_1    GPIO_NUM_9
-#define DOUT_2    GPIO_NUM_5       
+#define DOUT_1    GPIO_NUM_46 // old: 9
+#define DOUT_2    GPIO_NUM_5 // old: 5
 
 #define EXAMPLE_BUFF_SIZE              4 * sizeof(int32_t)//64
-#define CLOCK   48000
-
-static i2s_chan_handle_t                tx_chan_1;
-static i2s_chan_handle_t                tx_chan_2;       
-static i2s_chan_handle_t                rx_chan;        
+#define CLOCK   48000    
 
 //-----High Coeffs------//
-int32_t HighCoeffs_A_HP[2] = { 1395166348, -523407902 }; //hp3887 30bit
-int32_t HighCoeffs_B_HP[3] = { 748297431, -1496594861, 748297431 };
+const int32_t HighCoeffs_A_HP[2] = { 1395166348, -523407902 }; //hp3887 30bit
+const int32_t HighCoeffs_B_HP[3] = { 748297431, -1496594861, 748297431 };
 
-int32_t HighCoeffs_A_LP[2] = { -1947171197, -892451235 }; //lp23000 30bit
-int32_t HighCoeffs_B_LP[3] = { 978532682, 1957065364, 978532682 };
+const int32_t HighCoeffs_A_LP[2] = { -1947171197, -892451235 }; //lp23000 30bit
+const int32_t HighCoeffs_B_LP[3] = { 978532682, 1957065364, 978532682 };
 
 //-----Mid Coeffs------//
-int32_t MidCoeffs_A_HP[2] = { 2106887749, -1033695662 }; //hp203 30bit
-int32_t MidCoeffs_B_HP[3] = { 1053623222, -2107246444, 1053623222 };
+const int32_t MidCoeffs_A_HP[2] = { 2106887749, -1033695662 }; //hp203 30bit
+const int32_t MidCoeffs_B_HP[3] = { 1053623222, -2107246444, 1053623222 };
 
-int32_t MidCoeffs_A_LP[2] = { 1470521965, -563754365 }; // lp3483Hz 30bit
-int32_t MidCoeffs_B_LP[3] = { 41814974, 83629947, 41814974 };
+const int32_t MidCoeffs_A_LP[2] = { 1470521965, -563754365 }; // lp3483Hz 30bit
+const int32_t MidCoeffs_B_LP[3] = { 41814974, 83629947, 41814974 };
 
 //-----Low Coeffs------//
-float LowCoeffs_A_HP[2] = { 1.99685296051001, -0.99685790466517 }; //hp17
-float LowCoeffs_B_HP[3] = { 0.998427716293794, -1.99685543258759, 0.998427716293794 }; 
+// float LowCoeffs_A_HP[2] = { 1.99685296051001, -0.99685790466517 }; //hp17
+// float LowCoeffs_B_HP[3] = { 0.998427716293794, -1.99685543258759, 0.998427716293794 }; 
 
-int32_t LowCoeffs_A_LP[2] = { 2111633663, -1038474472 }; //lp178 30bit 
-int32_t LowCoeffs_B_LP[3] = { 143309, 286617, 143309 };
+const int32_t LowCoeffs_A_HP = 1070347903; //hp17 n=1
+const int32_t LowCoeffs_B_HP[2] = { 1072044923, -1072044923 };
+
+
+const int32_t LowCoeffs_A_LP[2] = { 2111633663, -1038474472 }; //lp178 30bit 
+const int32_t LowCoeffs_B_LP[3] = { 143309, 286617, 143309 };
 
 // a * y
 // b * x
 
+int32_t lastX_high[6] = {0};
+int32_t lastX_midR[6] = {0};
+int32_t lastX_midL[6] = {0};
+int32_t lastX_low[6] = {0};
 
 int64_t lastXR[6] = {0};
 int64_t lastXL[6] = {0};
@@ -71,135 +75,194 @@ int64_t lastYLow_0[6] = {0};
 int64_t lastYLow_1[6] = {0};
 
 const int shift = 30;
-uint64_t  clocks[4096];
+uint32_t clocks[4096] = {0};
 uint64_t sum = 0;
 int it = 0;
 int32_t max = 2147483647;          //real max: 2147418112 (3.12V). Using 2^31 - 1 (3.12V)
 void calculateY(int32_t *M_Buf, int32_t *H_L_Buf){
+    // uint32_t start = esp_cpu_get_cycle_count();
 
-    for (size_t i = 5; i >= 2; i--) {
-        lastYHigh_0[i] = lastYHigh_0[i - 1];
-        lastYHigh_1[i] = lastYHigh_1[i - 1];
+    // for (size_t i = 5; i >= 2; i--) {
+    //     lastYHigh_0[i] = lastYHigh_0[i - 2];
+    //     lastYHigh_1[i] = lastYHigh_1[i - 2];
 
-        lastYMid_R_0[i] = lastYMid_R_0[i - 1];
-        lastYMid_R_1[i] = lastYMid_R_1[i - 1];
+    //     lastYMid_R_0[i] = lastYMid_R_0[i - 2];
+    //     lastYMid_R_1[i] = lastYMid_R_1[i - 2];
 
-        lastYMid_L_0[i] = lastYMid_L_0[i - 1];
-        lastYMid_L_1[i] = lastYMid_L_1[i - 1];
+    //     lastYMid_L_0[i] = lastYMid_L_0[i - 2];
+    //     lastYMid_L_1[i] = lastYMid_L_1[i - 2];
 
-        lastYLow_0[i] = lastYLow_0[i - 1];
-        lastYLow_1[i] = lastYLow_1[i - 1];
-    }
+    //     lastYLow_0[i] = lastYLow_0[i - 2];
+    //     lastYLow_1[i] = lastYLow_1[i - 2];
+    // }
 
-    //-----High Calculation------//
-    //--HP_203Hz--//
-    lastYHigh_0[1] = ((lastXR[1] * HighCoeffs_B_HP[0]) >> shift) + ((lastXR[2] * HighCoeffs_B_HP[1]) >> shift) + ((lastXR[3] * HighCoeffs_B_HP[2]) >> shift)
-         + ((lastYHigh_0[2] * HighCoeffs_A_HP[0]) >> shift) + ((lastYHigh_0[3] * HighCoeffs_A_HP[1]) >> shift);
+    // //-----High Calculation------//
+    // //--HP_203Hz--//
+    // lastYHigh_0[1] = ((lastXR[1] * HighCoeffs_B_HP[0]) >> shift) + ((lastXR[2] * HighCoeffs_B_HP[1]) >> shift) + ((lastXR[3] * HighCoeffs_B_HP[2]) >> shift)
+    //      + ((lastYHigh_0[2] * HighCoeffs_A_HP[0]) >> shift) + ((lastYHigh_0[3] * HighCoeffs_A_HP[1]) >> shift);
 
-    lastYHigh_0[0] = ((lastXR[0] * HighCoeffs_B_HP[0]) >> shift) + ((lastXR[1] * HighCoeffs_B_HP[1]) >> shift) + ((lastXR[2] * HighCoeffs_B_HP[2]) >> shift)
-         + ((lastYHigh_0[1] * HighCoeffs_A_HP[0]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_A_HP[1]) >> shift);
+    // lastYHigh_0[0] = ((lastXR[0] * HighCoeffs_B_HP[0]) >> shift) + ((lastXR[1] * HighCoeffs_B_HP[1]) >> shift) + ((lastXR[2] * HighCoeffs_B_HP[2]) >> shift)
+    //      + ((lastYHigh_0[1] * HighCoeffs_A_HP[0]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_A_HP[1]) >> shift);
 
-    //--LP_3483Hz--//
-    lastYHigh_1[1] = ((lastYHigh_0[1] * HighCoeffs_B_LP[0]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_B_LP[1]) >> shift) + ((lastYHigh_0[3] * HighCoeffs_B_LP[2]) >> shift)
-         + ((lastYHigh_1[2] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[3] * HighCoeffs_A_LP[1]) >> shift);
+    // //--LP_3483Hz--//
+    // lastYHigh_1[1] = ((lastYHigh_0[1] * HighCoeffs_B_LP[0]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_B_LP[1]) >> shift) + ((lastYHigh_0[3] * HighCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYHigh_1[2] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[3] * HighCoeffs_A_LP[1]) >> shift);
 
-    lastYHigh_1[0] = ((lastYHigh_0[0] * HighCoeffs_B_LP[0]) >> shift) + ((lastYHigh_0[1] * HighCoeffs_B_LP[1]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_B_LP[2]) >> shift)
-         + ((lastYHigh_1[1] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[2] * HighCoeffs_A_LP[1]) >> shift);
-
-
-
-    //-----Mid Calculation------//
-    //--HP_203Hz--//
-    //--Right--//
-    lastYMid_R_0[1] = ((lastXR[1] * MidCoeffs_B_HP[0]) >> shift) + ((lastXR[2] * MidCoeffs_B_HP[1]) >> shift) + ((lastXR[3] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_R_0[2] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_R_0[3] * MidCoeffs_A_HP[1]) >> shift);
-
-    lastYMid_R_0[0] = ((lastXR[0] * MidCoeffs_B_HP[0]) >> shift) + ((lastXR[1] * MidCoeffs_B_HP[1]) >> shift) + ((lastXR[2] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_R_0[1] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_A_HP[1]) >> shift);
-    //--Left--//
-    lastYMid_L_0[1] = ((lastXL[1] * MidCoeffs_B_HP[0]) >> shift) + ((lastXL[2] * MidCoeffs_B_HP[1]) >> shift) + ((lastXL[3] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_L_0[2] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_L_0[3] * MidCoeffs_A_HP[1]) >> shift);
-
-    lastYMid_L_0[0] = ((lastXL[0] * MidCoeffs_B_HP[0]) >> shift) + ((lastXL[1] * MidCoeffs_B_HP[1]) >> shift) + ((lastXL[2] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_L_0[1] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_A_HP[1]) >> shift);
-
-
-    //--LP_3483Hz--//
-    //--Right--//
-    lastYMid_R_1[1] = ((lastYMid_R_0[1] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_R_0[3] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_R_1[2] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_R_1[3] * MidCoeffs_A_LP[1]) >> shift);
-
-    lastYMid_R_1[0] = ((lastYMid_R_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_R_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_R_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_R_1[2] * MidCoeffs_A_LP[1]) >> shift);
-    //--Left--//
-    lastYMid_L_1[1] = ((lastYMid_L_0[1] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[3] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_L_1[2] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[3] * MidCoeffs_A_LP[1]) >> shift);
-
-    lastYMid_L_1[0] = ((lastYMid_L_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_L_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[2] * MidCoeffs_A_LP[1]) >> shift);
+    // lastYHigh_1[0] = ((lastYHigh_0[0] * HighCoeffs_B_LP[0]) >> shift) + ((lastYHigh_0[1] * HighCoeffs_B_LP[1]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYHigh_1[1] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[2] * HighCoeffs_A_LP[1]) >> shift);
 
 
 
-    //-----Low Calculation------//
-    //--HP_17Hz--//
-    lastYLow_0[1] = (lastXR[1] * LowCoeffs_B_HP[0]) + (lastXR[2] * LowCoeffs_B_HP[1]) + (lastXR[3] * LowCoeffs_B_HP[2])
-            + (lastYLow_0[2] * LowCoeffs_A_HP[0]) + (lastYLow_0[3] * LowCoeffs_A_HP[1]);
+    // //-----Mid Calculation------//
+    // //--HP_203Hz--//
+    // //--Right--//
+    // lastYMid_R_0[1] = ((lastXR[1] * MidCoeffs_B_HP[0]) >> shift) + ((lastXR[2] * MidCoeffs_B_HP[1]) >> shift) + ((lastXR[3] * MidCoeffs_B_HP[2]) >> shift)
+    //      + ((lastYMid_R_0[2] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_R_0[3] * MidCoeffs_A_HP[1]) >> shift);
 
-    lastYLow_0[0] = (lastXR[0] * LowCoeffs_B_HP[0]) + (lastXR[1] * LowCoeffs_B_HP[1]) + (lastXR[2] * LowCoeffs_B_HP[2])
-            + (lastYLow_0[1] * LowCoeffs_A_HP[0]) + (lastYLow_0[2] * LowCoeffs_A_HP[1]); 
+    // lastYMid_R_0[0] = ((lastXR[0] * MidCoeffs_B_HP[0]) >> shift) + ((lastXR[1] * MidCoeffs_B_HP[1]) >> shift) + ((lastXR[2] * MidCoeffs_B_HP[2]) >> shift)
+    //      + ((lastYMid_R_0[1] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_A_HP[1]) >> shift);
+    // //--Left--//
+    // lastYMid_L_0[1] = ((lastXL[1] * MidCoeffs_B_HP[0]) >> shift) + ((lastXL[2] * MidCoeffs_B_HP[1]) >> shift) + ((lastXL[3] * MidCoeffs_B_HP[2]) >> shift)
+    //      + ((lastYMid_L_0[2] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_L_0[3] * MidCoeffs_A_HP[1]) >> shift);
 
-    //--LP_178Hz--//
-    lastYLow_1[1] = ((lastYLow_0[1] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[3] * LowCoeffs_B_LP[2]) >> shift)
-         + ((lastYLow_1[2] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[3] * LowCoeffs_A_LP[1]) >> shift);
+    // lastYMid_L_0[0] = ((lastXL[0] * MidCoeffs_B_HP[0]) >> shift) + ((lastXL[1] * MidCoeffs_B_HP[1]) >> shift) + ((lastXL[2] * MidCoeffs_B_HP[2]) >> shift)
+    //      + ((lastYMid_L_0[1] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_A_HP[1]) >> shift);
 
-    lastYLow_1[0] = ((lastYLow_0[0] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[1] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[2]) >> shift)
-         + ((lastYLow_1[1] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[2] * LowCoeffs_A_LP[1]) >> shift);
+
+    // //--LP_3483Hz--//
+    // //--Right--//
+    // lastYMid_R_1[1] = ((lastYMid_R_0[1] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_R_0[3] * MidCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYMid_R_1[2] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_R_1[3] * MidCoeffs_A_LP[1]) >> shift);
+
+    // lastYMid_R_1[0] = ((lastYMid_R_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_R_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYMid_R_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_R_1[2] * MidCoeffs_A_LP[1]) >> shift);
+    // //--Left--//
+    // lastYMid_L_1[1] = ((lastYMid_L_0[1] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[3] * MidCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYMid_L_1[2] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[3] * MidCoeffs_A_LP[1]) >> shift);
+
+    // lastYMid_L_1[0] = ((lastYMid_L_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYMid_L_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[2] * MidCoeffs_A_LP[1]) >> shift);
+
+
+
+    // //-----Low Calculation------//
+    // //--HP_17Hz--//
+    // // lastYLow_0[1] = (lastXR[1] * LowCoeffs_B_HP[0]) + (lastXR[2] * LowCoeffs_B_HP[1]) + (lastXR[3] * LowCoeffs_B_HP[2])
+    // //         + (lastYLow_0[2] * LowCoeffs_A_HP[0]) + (lastYLow_0[3] * LowCoeffs_A_HP[1]);
+
+    // // lastYLow_0[0] = (lastXR[0] * LowCoeffs_B_HP[0]) + (lastXR[1] * LowCoeffs_B_HP[1]) + (lastXR[2] * LowCoeffs_B_HP[2])
+    // //         + (lastYLow_0[1] * LowCoeffs_A_HP[0]) + (lastYLow_0[2] * LowCoeffs_A_HP[1]); 
+
+    // //--LP_178Hz--//
+    // lastYLow_1[1] = ((lastYLow_0[1] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[3] * LowCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYLow_1[2] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[3] * LowCoeffs_A_LP[1]) >> shift);
+
+    // lastYLow_1[0] = ((lastYLow_0[0] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[1] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[2]) >> shift)
+    //      + ((lastYLow_1[1] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[2] * LowCoeffs_A_LP[1]) >> shift);
 
     
+    
+    //clocks[it] = esp_cpu_get_cycle_count() - start;
 
-    //clocks[it] = esp_cpu_get_cycle_count() - clocks[it] -1;
-
-    // lastYHigh_1[0] = lastXR[0];
-    // lastYHigh_1[1] = lastXR[1];
+    // lastYLow_1[0] = lastXR[0];
+    // lastYLow_1[1] = lastXR[1];
 
     // lastYMid_R_1[0] = lastXR[0];
     // lastYMid_R_1[1] = lastXR[1];
 
-    // lastYMid_L_1[0] =lastXR[0];
-    // lastYMid_L_1[1] =lastXR[1];
+    // lastYMid_L_1[0] = lastXL[0];
+    // lastYMid_L_1[1] = lastXL[1];
+
+    // lastYHigh_1[0] = lastXR[0];
+    // lastYHigh_1[1] = lastXR[1];
+
+
+    lastYLow_1[0] = lastX_low[0];
+    lastYLow_1[1] = lastX_low[1];
+
+    lastYMid_R_1[0] = lastX_midR[0];
+    lastYMid_R_1[1] = lastX_midR[1];
+
+    lastYMid_L_1[0] = lastX_midL[0];
+    lastYMid_L_1[1] = lastX_midL[1];
+
+    lastYHigh_1[0] = lastX_high[0];
+    lastYHigh_1[1] = lastX_high[1];
 
     //printf("calc cycles: %llu\n", clocks[it]);
     // it++;
     // if (it == 4095)
     // {
-    //     for (size_t i = 0; i < 4096; i++)
+    //     for (size_t i = 1; i < 4096; i++)
     //     {
     //         sum += clocks[i];
     //     }
     //     printf("Avg calc cycles: %llu\n", sum >> 12);
+    //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
     //     sum = 0;
     //     it = 0;
     // }
+}
 
-    // if (lastXR[1] > max)
+int16_t main_volume;
+int16_t high_volume;
+int16_t mid_volume;
+int16_t low_volume;
+
+void pushNewX(int32_t *newSample){
+  
+    //uint32_t start = esp_cpu_get_cycle_count();
+
+    for (int i = 5; i >= 2; --i) {
+        lastX_high[i] = lastX_high[i-2];
+        lastX_midR[i] = lastX_midR[i-2];
+        lastX_midL[i] = lastX_midL[i-2];
+        lastX_low[i]  = lastX_low[i-2];
+    }
+
+    {
+        int32_t L = newSample[0];
+        int32_t R = newSample[1];
+
+        int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
+        int64_t left  = ((int64_t)L * main_volume) >> 12;
+        int64_t right = ((int64_t)R * main_volume) >> 12;
+
+        lastX_high[1] = (int32_t)((mono  * high_volume) >> 12);
+        lastX_low[1]  = (int32_t)((mono  * low_volume)  >> 12);
+        lastX_midL[1] = (int32_t)((left  * mid_volume)  >> 12);
+        lastX_midR[1] = (int32_t)((right * mid_volume)  >> 12);
+    }
+
+    {
+        int32_t L = newSample[3];
+        int32_t R = newSample[2];
+
+        int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
+        int64_t left  = ((int64_t)L * main_volume) >> 12;
+        int64_t right = ((int64_t)R * main_volume) >> 12;
+
+        lastX_high[0] = (int32_t)((mono  * high_volume) >> 12);
+        lastX_low[0]  = (int32_t)((mono  * low_volume)  >> 12);
+        lastX_midL[0] = (int32_t)((left  * mid_volume)  >> 12);
+        lastX_midR[0] = (int32_t)((right * mid_volume) >> 12);
+    }
+    // clocks[it] = esp_cpu_get_cycle_count() - start;
+
+    // it++;
+    // if (it == 4095)
     // {
-    //     max = lastXR[1];
-    //     printf("new Max: %ld\n", max);
+    //     for (size_t i = 1; i < 4096; i++)
+    //     {
+    //         sum += clocks[i];
+    //     }
+    //     printf("Avg calc cycles: %llu\n", sum >> 12);
+    //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
+    //     sum = 0;
+    //     it = 0;
     // }
 }
 
-void pushNewX(int32_t *newSample){
-    for (size_t i = 5; i >= 2; i--)
-    {
-        lastXR[i] = lastXR[i-2];
-        lastXL[i] = lastXL[i-2];
-    }
-    lastXL[1] = newSample[0];
-    lastXR[1] = newSample[1];
-    
-    lastXR[0] = newSample[2];
-    lastXL[0] = newSample[3];
-}
 
 void mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
     H_L_Buf[0] = lastYHigh_1[1];
@@ -213,18 +276,22 @@ void mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
     H_L_Buf[3] = lastYLow_1[0];
 }
 
+static i2s_chan_handle_t                tx_chan_1;
+static i2s_chan_handle_t                tx_chan_2;       
+static i2s_chan_handle_t                rx_chan;   
+
 static void fiter(void *args)
 {
     int32_t *r_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *w_buf1 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    
-    // int32_t *testBuf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    // int32_t *w_buf2 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-
     assert(r_buf); 
     assert(w_buf1);
-    // assert(w_buf2);
+    
+    // int32_t *testBuf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *w_buf2 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    assert(w_buf2);
     // assert(testBuf);
+
 
     int32_t *M_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *H_L_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
@@ -264,7 +331,6 @@ static void fiter(void *args)
     free(r_buf);
     free(M_Buf);
     free(H_L_Buf);
-    //free(r_buf2);
     vTaskDelete(NULL);
 }
 
@@ -340,51 +406,58 @@ static void init_i2s(void)
     ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_chan_2, &s_cfg));
 }
 
-void init_channel(adc_oneshot_unit_handle_t handle, adc_channel_t channel){
-    adc_oneshot_unit_init_cfg_t  main_config1 = {
-        .unit_id = ADC_UNIT_1,
-    };
-    adc_oneshot_new_unit(&main_config1, &handle);
 
-    adc_oneshot_chan_cfg_t config = {
+adc_oneshot_unit_handle_t adc_handle;
+
+void init_adc() {
+    adc_oneshot_unit_init_cfg_t unit_cfg = {
+        .unit_id = ADC_UNIT_2,
+    };
+    adc_oneshot_new_unit(&unit_cfg, &adc_handle);
+
+    adc_oneshot_chan_cfg_t chan_cfg = {
         .bitwidth = ADC_BITWIDTH_12,
         .atten = ADC_ATTEN_DB_12,
     };
-    adc_oneshot_config_channel(handle, ADC_CHANNEL_0, &config);
+
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_3, &chan_cfg); // Pin 14
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_2, &chan_cfg); // Pin 13
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_1, &chan_cfg); // Pin 12
+    adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_0, &chan_cfg); // Pin 11
 }
 
-adc_oneshot_unit_handle_t main_handle;
-adc_oneshot_unit_handle_t high_handle;
-adc_oneshot_unit_handle_t mid_handle;
-adc_oneshot_unit_handle_t low_handle;
-
-void init_adc(){
-    init_channel(main_handle, ADC_CHANNEL_0);
-    init_channel(high_handle, ADC_CHANNEL_0);
-    init_channel(mid_handle, ADC_CHANNEL_0);
-    init_channel(low_handle, ADC_CHANNEL_0);
-}
- 
-int16_t read_adc(adc_oneshot_unit_handle_t handle){
-    int16_t ret;
-    adc_oneshot_read(handle, ADC_CHANNEL_0, &ret);
-    return ret;
+int16_t read_adc(adc_channel_t channel) {
+    int raw;
+    adc_oneshot_read(adc_handle, channel, &raw);
+    //printf("raw: %d\n", raw);
+    return raw;
 }
 
 int16_t make_exponential(int16_t x){
-    return x *= pow((x/4096), 2);
+    return x *= pow(((float)x/4096), 2);
 }
 
-int16_t main_volume;
-int16_t high_volume;
-int16_t mid_volume;
-int16_t low_volume;
+const float high_Limit = 0.3;
+const float mid_Limit = 0.3;
+const float low_Limit = 0.3;
 
 void get_volumes(){
-    main_volume = make_exponential(read_adc(main_handle));
-    high_volume = make_exponential(read_adc(high_handle));
-    mid_volume = make_exponential(read_adc(mid_handle));
-    low_volume = make_exponential(read_adc(low_handle));
+    main_volume = read_adc(ADC_CHANNEL_3);  // Pin 14
+    high_volume = make_exponential(read_adc(ADC_CHANNEL_2)) * high_Limit;  // Pin 13
+    mid_volume = make_exponential(read_adc(ADC_CHANNEL_1)) * mid_Limit;  // Pin 12
+    low_volume = make_exponential(read_adc(ADC_CHANNEL_0)) * low_Limit;  // Pin 11
+}
+
+void volumeControll(){
+    while (true)
+    {
+        get_volumes();
+        vTaskDelay(pdMS_TO_TICKS(100));
+        // printf("main: %d\n", main_volume);
+        // printf("high: %d\n", high_volume);
+        // printf("mid: %d\n", mid_volume);
+        // printf("low: %d\n", low_volume);
+    }
 }
 
 void app_main(void)
@@ -392,5 +465,6 @@ void app_main(void)
     init_i2s();
     init_adc();
     //xTaskCreate(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 0, NULL);
+    xTaskCreatePinnedToCore(volumeControll, "volumeControll", 4096, NULL, 2, NULL, 0);
     xTaskCreatePinnedToCore(fiter, "filter", 4096, NULL, 0, NULL, 1);
 }

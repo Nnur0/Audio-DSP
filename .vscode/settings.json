@@ -5,7 +5,7 @@
     "idf.openOcdConfigs": [
         "board/esp32s3-builtin.cfg"
     ],
-    "idf.portWin": "COM3",
+    "idf.portWin": "COM7",
     "idf.toolsPathWin": "C:\\Users\\savel\\.espressif",
     "idf.customExtraVars": {
         "IDF_TARGET": "esp32s3"
@@ -16,6 +16,9 @@
         "task.h": "c",
         "esp_check.h": "c",
         "sdkconfig.h": "c",
-        "adc_oneshot.h": "c"
-    }
+        "adc_oneshot.h": "c",
+        "compare": "c",
+        "cstdint": "c"
+    },
+    "idf.flashType": "UART"
 }

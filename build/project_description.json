@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "project-name",
-    "project_version":    "7fcea26-dirty",
+    "project_version":    "05d99d5-dirty",
     "project_path":       "C:/Projekte/Box/project-name",
     "idf_path":           "C:/Users/savel/esp/v5.4/esp-idf",
     "build_dir":          "C:/Projekte/Box/project-name/build",
