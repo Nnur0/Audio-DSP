@@ -18,7 +18,8 @@
         "sdkconfig.h": "c",
         "adc_oneshot.h": "c",
         "compare": "c",
-        "cstdint": "c"
+        "cstdint": "c",
+        "adc_cali.h": "c"
     },
     "idf.flashType": "UART"
 }
