@@ -51,27 +51,27 @@ const int64_t LowCoeffs_B_LP[3] = { 143309, 286617, 143309 };
 // a * y
 // b * x
 
-int32_t lastX_high[6] = {0};
-int32_t lastX_midR[6] = {0};
-int32_t lastX_midL[6] = {0};
-int32_t lastX_low[6] = {0};
+int32_t lastX_high[4] = {0};
+int32_t lastX_midR[4] = {0};
+int32_t lastX_midL[4] = {0};
+int32_t lastX_low[4] = {0};
 
-int32_t lastYHigh_0[6] = {0};
-int32_t lastYHigh_1[6] = {0};
+int32_t lastYHigh_0[4] = {0};
+int32_t lastYHigh_1[4] = {0};
 
-int32_t lastYMid_R_0[6] = {0};
-int32_t lastYMid_R_1[6] = {0};
+int32_t lastYMid_R_0[4] = {0};
+int32_t lastYMid_R_1[4] = {0};
 
-int32_t lastYMid_L_0[6] = {0};
-int32_t lastYMid_L_1[6] = {0};
+int32_t lastYMid_L_0[4] = {0};
+int32_t lastYMid_L_1[4] = {0};
 
-int32_t lastYLow_0[6] = {0};
-int32_t lastYLow_1[6] = {0};
+int32_t lastYLow_0[4] = {0};
+int32_t lastYLow_1[4] = {0};
 
 const int shift = 30;
-// uint32_t clocks[4096] = {0};
-// uint64_t sum = 0;
-// int it = 0;
+uint32_t clocks[4096] = {0};
+uint64_t sum = 0;
+int it = 0;
 //int32_t max = 2147483647;          //real max: 2147418112 (3.12V). Using 2^31 - 1 (3.12V)
 
 static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restrict H_L_Buf){
@@ -97,14 +97,14 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
     // memmove(&lastYLow_0[2],  &lastYLow_0[0],  4 * sizeof(lastYLow_0[0]));
     // memmove(&lastYLow_1[2],  &lastYLow_1[0],  4 * sizeof(lastYLow_1[0]));
 
-    lastYHigh_0[5] = lastYHigh_0[3]; lastYHigh_0[4] = lastYHigh_0[2]; lastYHigh_0[3] = lastYHigh_0[1]; lastYHigh_0[2] = lastYHigh_0[0];
-    lastYHigh_1[5] = lastYHigh_1[3]; lastYHigh_1[4] = lastYHigh_1[2]; lastYHigh_1[3] = lastYHigh_1[1]; lastYHigh_1[2] = lastYHigh_1[0];
-    lastYMid_R_0[5] = lastYMid_R_0[3]; lastYMid_R_0[4] = lastYMid_R_0[2]; lastYMid_R_0[3] = lastYMid_R_0[1]; lastYMid_R_0[2] = lastYMid_R_0[0];
-    lastYMid_R_1[5] = lastYMid_R_1[3]; lastYMid_R_1[4] = lastYMid_R_1[2]; lastYMid_R_1[3] = lastYMid_R_1[1]; lastYMid_R_1[2] = lastYMid_R_1[0];
-    lastYMid_L_0[5] = lastYMid_L_0[3]; lastYMid_L_0[4] = lastYMid_L_0[2]; lastYMid_L_0[3] = lastYMid_L_0[1]; lastYMid_L_0[2] = lastYMid_L_0[0];
-    lastYMid_L_1[5] = lastYMid_L_1[3]; lastYMid_L_1[4] = lastYMid_L_1[2]; lastYMid_L_1[3] = lastYMid_L_1[1]; lastYMid_L_1[2] = lastYMid_L_1[0];
-    lastYLow_0[5]   = lastYLow_0[3];   lastYLow_0[4]   = lastYLow_0[2];   lastYLow_0[3]   = lastYLow_0[1];   lastYLow_0[2]   = lastYLow_0[0];
-    lastYLow_1[5]   = lastYLow_1[3];   lastYLow_1[4]   = lastYLow_1[2];   lastYLow_1[3]   = lastYLow_1[1];   lastYLow_1[2]   = lastYLow_1[0];
+    lastYHigh_0[3] = lastYHigh_0[1]; lastYHigh_0[2] = lastYHigh_0[0];
+    lastYHigh_1[3] = lastYHigh_1[1]; lastYHigh_1[2] = lastYHigh_1[0];
+    lastYMid_R_0[3] = lastYMid_R_0[1]; lastYMid_R_0[2] = lastYMid_R_0[0];
+    lastYMid_R_1[3] = lastYMid_R_1[1]; lastYMid_R_1[2] = lastYMid_R_1[0];
+    lastYMid_L_0[3] = lastYMid_L_0[1]; lastYMid_L_0[2] = lastYMid_L_0[0];
+    lastYMid_L_1[3] = lastYMid_L_1[1]; lastYMid_L_1[2] = lastYMid_L_1[0];
+    lastYLow_0[3]   = lastYLow_0[1];   lastYLow_0[2]   = lastYLow_0[0];
+    lastYLow_1[3]   = lastYLow_1[1];   lastYLow_1[2]   = lastYLow_1[0];
 
     //-----High Calculation------//
     //--HP_203Hz--//
@@ -188,7 +188,6 @@ int16_t mid_volume;
 int16_t low_volume;
 
 static inline void IRAM_ATTR pushNewX(int32_t *newSample){ // clocks: 954, wenn filter funktion auskommentiert
-    //uint32_t start = esp_cpu_get_cycle_count();
     // for (int i = 5; i >= 2; --i) {
     //     lastX_high[i] = lastX_high[i-2];
     //     lastX_midR[i] = lastX_midR[i-2];
@@ -199,10 +198,11 @@ static inline void IRAM_ATTR pushNewX(int32_t *newSample){ // clocks: 954, wenn 
     // memmove(&lastX_midR[2], &lastX_midR[0], 4 * sizeof(lastX_midR[0]));
     // memmove(&lastX_midL[2], &lastX_midL[0], 4 * sizeof(lastX_midL[0]));
     // memmove(&lastX_low[2],  &lastX_low[0],  4 * sizeof(lastX_low[0]));
-    lastX_high[5] = lastX_high[3]; lastX_high[4] = lastX_high[2]; lastX_high[3] = lastX_high[1]; lastX_high[2] = lastX_high[0];
-    lastX_midR[5] = lastX_midR[3]; lastX_midR[4] = lastX_midR[2]; lastX_midR[3] = lastX_midR[1]; lastX_midR[2] = lastX_midR[0];
-    lastX_midL[5] = lastX_midL[3]; lastX_midL[4] = lastX_midL[2]; lastX_midL[3] = lastX_midL[1]; lastX_midL[2] = lastX_midL[0];
-    lastX_low[5]  = lastX_low[3];  lastX_low[4]  = lastX_low[2];  lastX_low[3]  = lastX_low[1];  lastX_low[2]  = lastX_low[0];
+
+    lastX_high[3] = lastX_high[1]; lastX_high[2] = lastX_high[0];
+    lastX_midR[3] = lastX_midR[1]; lastX_midR[2] = lastX_midR[0];
+    lastX_midL[3] = lastX_midL[1]; lastX_midL[2] = lastX_midL[0];
+    lastX_low[3]  = lastX_low[1];  lastX_low[2]  = lastX_low[0];
 
     {
         int32_t L = newSample[0];
@@ -231,20 +231,6 @@ static inline void IRAM_ATTR pushNewX(int32_t *newSample){ // clocks: 954, wenn 
         lastX_midL[0] = (int32_t)((left  * mid_volume)  >> 12);
         lastX_midR[0] = (int32_t)((right * mid_volume) >> 12);
     }
-    
-    // clocks[it] = esp_cpu_get_cycle_count() - start;
-    // it++;
-    // if (it == 4095)
-    // {
-    //     for (size_t i = 1; i < 4096; i++)
-    //     {
-    //         sum += clocks[i];
-    //     }
-    //     printf("Avg calc cycles: %llu\n", sum >> 12);
-    //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
-    //     sum = 0;
-    //     it = 0;
-    // }
 }
 
 
@@ -281,25 +267,24 @@ static inline void fiter(void *args)
 
     while (true) {
         if (i2s_channel_read(rx_chan, r_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
-            //uint32_t start = esp_cpu_get_cycle_count();
+            uint32_t start = esp_cpu_get_cycle_count();
             pushNewX(r_buf);
             calculateY(M_Buf, H_L_Buf);
             mapOutput(M_Buf, H_L_Buf);
-            //processSample(r_buf, M_Buf, H_L_Buf);
 
-            // clocks[it] = esp_cpu_get_cycle_count() - start;
-            // it++;
-            // if (it == 4095)
-            // {
-            //     for (size_t i = 1; i < 4096; i++)
-            //     {
-            //         sum += clocks[i];
-            //     }
-            //     printf("Avg calc cycles: %llu\n", sum >> 12);
-            //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
-            //     sum = 0;
-            //     it = 0;
-            // }
+            clocks[it] = esp_cpu_get_cycle_count() - start;
+            it++;
+            if (it == 4095)
+            {
+                for (size_t i = 1; i < 4096; i++)
+                {
+                    sum += clocks[i];
+                }
+                printf("Avg calc cycles: %llu\n", sum >> 12);
+                //printf("Avg calc cycles: %lu\n", clocks[4096]);
+                sum = 0;
+                it = 0;
+            }
 
             i2s_channel_write(tx_chan_1, M_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
             i2s_channel_write(tx_chan_2, H_L_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
