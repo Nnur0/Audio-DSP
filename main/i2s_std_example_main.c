@@ -41,9 +41,6 @@ const int64_t MidCoeffs_A_LP[2] = { 1470521965, -563754365 }; // lp3483Hz 30bit
 const int64_t MidCoeffs_B_LP[3] = { 41814974, 83629947, 41814974 };
 
 //-----Low Coeffs------//
-// float LowCoeffs_A_HP[2] = { 1.99685296051001, -0.99685790466517 }; //hp17
-// float LowCoeffs_B_HP[3] = { 0.998427716293794, -1.99685543258759, 0.998427716293794 }; 
-
 const int64_t LowCoeffs_A_HP = 1070347903; //hp17 n=1
 const int64_t LowCoeffs_B_HP[2] = { 1072044923, -1072044923 };
 
@@ -59,9 +56,6 @@ int32_t lastX_midR[6] = {0};
 int32_t lastX_midL[6] = {0};
 int32_t lastX_low[6] = {0};
 
-// int64_t lastXR[6] = {0};
-// int64_t lastXL[6] = {0};
-
 int32_t lastYHigh_0[6] = {0};
 int32_t lastYHigh_1[6] = {0};
 
@@ -75,14 +69,12 @@ int32_t lastYLow_0[6] = {0};
 int32_t lastYLow_1[6] = {0};
 
 const int shift = 30;
-uint32_t clocks[4096] = {0};
-uint64_t sum = 0;
-int it = 0;
+// uint32_t clocks[4096] = {0};
+// uint64_t sum = 0;
+// int it = 0;
 //int32_t max = 2147483647;          //real max: 2147418112 (3.12V). Using 2^31 - 1 (3.12V)
 
 static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restrict H_L_Buf){
-    // uint32_t start = esp_cpu_get_cycle_count();
-
     // for (int i = 5; i >= 2; i--) {
     //     lastYHigh_0[i] = lastYHigh_0[i - 2];
     //     lastYHigh_1[i] = lastYHigh_1[i - 2];
@@ -130,7 +122,6 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
          + ((lastYHigh_1[1] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[2] * HighCoeffs_A_LP[1]) >> shift);
 
 
-
     //-----Mid Calculation------//
     //--HP_203Hz--//
     //--Right--//
@@ -163,14 +154,7 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
 
 
 
-    //-----Low Calculation------//
-    //--HP_17Hz--//
-    // lastYLow_0[1] = (lastXR[1] * LowCoeffs_B_HP[0]) + (lastXR[2] * LowCoeffs_B_HP[1]) + (lastXR[3] * LowCoeffs_B_HP[2])
-    //         + (lastYLow_0[2] * LowCoeffs_A_HP[0]) + (lastYLow_0[3] * LowCoeffs_A_HP[1]);
-
-    // lastYLow_0[0] = (lastXR[0] * LowCoeffs_B_HP[0]) + (lastXR[1] * LowCoeffs_B_HP[1]) + (lastXR[2] * LowCoeffs_B_HP[2])
-    //         + (lastYLow_0[1] * LowCoeffs_A_HP[0]) + (lastYLow_0[2] * LowCoeffs_A_HP[1]);
-            
+    //-----Low Calculation------//  
     lastYLow_0[1] = ((lastX_low[1] * LowCoeffs_B_HP[0]) >> shift) + ((lastX_low[2] * LowCoeffs_B_HP[1]) >> shift)
          + ((lastYLow_0[2] * LowCoeffs_A_HP) >> shift);
 
@@ -184,91 +168,6 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
     lastYLow_1[0] = ((lastYLow_0[0] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[1] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[2]) >> shift)
          + ((lastYLow_1[1] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[2] * LowCoeffs_A_LP[1]) >> shift);
 
-    
-    // //-----High Calculation------//
-    // //--HP_203Hz--//
-    // lastYHigh_0[1] = (((int64_t)lastX_high[1] * HighCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_high[2] * HighCoeffs_B_HP[1]) >> shift) + (((int64_t)lastX_high[3] * HighCoeffs_B_HP[2]) >> shift)
-    //      + (((int64_t)lastYHigh_0[2] * HighCoeffs_A_HP[0]) >> shift) + (((int64_t)lastYHigh_0[3] * HighCoeffs_A_HP[1]) >> shift);
-
-    // lastYHigh_0[0] = (((int64_t)lastX_high[0] * HighCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_high[1] * HighCoeffs_B_HP[1]) >> shift) + (((int64_t)lastX_high[2] * HighCoeffs_B_HP[2]) >> shift)
-    //      + (((int64_t)lastYHigh_0[1] * HighCoeffs_A_HP[0]) >> shift) + (((int64_t)lastYHigh_0[2] * HighCoeffs_A_HP[1]) >> shift);
-
-    // //--LP_3483Hz--//
-    // lastYHigh_1[1] = (((int64_t)lastYHigh_0[1] * HighCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYHigh_0[2] * HighCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYHigh_0[3] * HighCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYHigh_1[2] * HighCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYHigh_1[3] * HighCoeffs_A_LP[1]) >> shift);
-
-    // lastYHigh_1[0] = (((int64_t)lastYHigh_0[0] * HighCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYHigh_0[1] * HighCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYHigh_0[2] * HighCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYHigh_1[1] * HighCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYHigh_1[2] * HighCoeffs_A_LP[1]) >> shift);
-
-
-
-    // //-----Mid Calculation------//
-    // //--HP_203Hz--//
-    // //--Right--//
-    // lastYMid_R_0[1] = (((int64_t)lastX_midR[1] * MidCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_midR[2] * MidCoeffs_B_HP[1]) >> shift) + (((int64_t)lastX_midR[3] * MidCoeffs_B_HP[2]) >> shift)
-    //      + (((int64_t)lastYMid_R_0[2] * MidCoeffs_A_HP[0]) >> shift) + (((int64_t)lastYMid_R_0[3] * MidCoeffs_A_HP[1]) >> shift);
-
-    // lastYMid_R_0[0] = (((int64_t)lastX_midR[0] * MidCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_midR[1] * MidCoeffs_B_HP[1]) >> shift) + (((int64_t)lastX_midR[2] * MidCoeffs_B_HP[2]) >> shift)
-    //      + (((int64_t)lastYMid_R_0[1] * MidCoeffs_A_HP[0]) >> shift) + (((int64_t)lastYMid_R_0[2] * MidCoeffs_A_HP[1]) >> shift);
-    // //--Left--//
-    // lastYMid_L_0[1] = (((int64_t)lastX_midL[1] * MidCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_midL[2] * MidCoeffs_B_HP[1]) >> shift) + (((int64_t)lastX_midL[3] * MidCoeffs_B_HP[2]) >> shift)
-    //      + (((int64_t)lastYMid_L_0[2] * MidCoeffs_A_HP[0]) >> shift) + (((int64_t)lastYMid_L_0[3] * MidCoeffs_A_HP[1]) >> shift);
-
-    // lastYMid_L_0[0] = (((int64_t)lastX_midL[0] * MidCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_midL[1] * MidCoeffs_B_HP[1]) >> shift) + (((int64_t)lastX_midL[2] * MidCoeffs_B_HP[2]) >> shift)
-    //      + (((int64_t)lastYMid_L_0[1] * MidCoeffs_A_HP[0]) >> shift) + (((int64_t)lastYMid_L_0[2] * MidCoeffs_A_HP[1]) >> shift);
-
-
-    // //--LP_3483Hz--//
-    // //--Right--//
-    // lastYMid_R_1[1] = (((int64_t)lastYMid_R_0[1] * MidCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYMid_R_0[2] * MidCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYMid_R_0[3] * MidCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYMid_R_1[2] * MidCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYMid_R_1[3] * MidCoeffs_A_LP[1]) >> shift);
-
-    // lastYMid_R_1[0] = (((int64_t)lastYMid_R_0[0] * MidCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYMid_R_0[1] * MidCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYMid_R_0[2] * MidCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYMid_R_1[1] * MidCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYMid_R_1[2] * MidCoeffs_A_LP[1]) >> shift);
-    // //--Left--//
-    // lastYMid_L_1[1] = (((int64_t)lastYMid_L_0[1] * MidCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYMid_L_0[2] * MidCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYMid_L_0[3] * MidCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYMid_L_1[2] * MidCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYMid_L_1[3] * MidCoeffs_A_LP[1]) >> shift);
-
-    // lastYMid_L_1[0] = (((int64_t)lastYMid_L_0[0] * MidCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYMid_L_0[1] * MidCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYMid_L_0[2] * MidCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYMid_L_1[1] * MidCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYMid_L_1[2] * MidCoeffs_A_LP[1]) >> shift);
-
-
-
-    // //-----Low Calculation------//
-    // //--HP_17Hz--//
-    // // lastYLow_0[1] = (lastXR[1] * LowCoeffs_B_HP[0]) + (lastXR[2] * LowCoeffs_B_HP[1]) + (lastXR[3] * LowCoeffs_B_HP[2])
-    // //         + (lastYLow_0[2] * LowCoeffs_A_HP[0]) + (lastYLow_0[3] * LowCoeffs_A_HP[1]);
-
-    // // lastYLow_0[0] = (lastXR[0] * LowCoeffs_B_HP[0]) + (lastXR[1] * LowCoeffs_B_HP[1]) + (lastXR[2] * LowCoeffs_B_HP[2])
-    // //         + (lastYLow_0[1] * LowCoeffs_A_HP[0]) + (lastYLow_0[2] * LowCoeffs_A_HP[1]);
-            
-    // lastYLow_0[1] = (((int64_t)lastX_low[1] * LowCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_low[2] * LowCoeffs_B_HP[1]) >> shift)
-    //      + (((int64_t)lastYLow_0[2] * LowCoeffs_A_HP) >> shift);
-
-    // lastYLow_0[0] = (((int64_t)lastX_low[0] * LowCoeffs_B_HP[0]) >> shift) + (((int64_t)lastX_low[1] * LowCoeffs_B_HP[1]) >> shift)
-    //      + (((int64_t)lastYLow_0[1] * LowCoeffs_A_HP) >> shift);
-
-    // //--LP_178Hz--//
-    // lastYLow_1[1] = (((int64_t)lastYLow_0[1] * LowCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYLow_0[2] * LowCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYLow_0[3] * LowCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYLow_1[2] * LowCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYLow_1[3] * LowCoeffs_A_LP[1]) >> shift);
-
-    // lastYLow_1[0] = (((int64_t)lastYLow_0[0] * LowCoeffs_B_LP[0]) >> shift) + (((int64_t)lastYLow_0[1] * LowCoeffs_B_LP[1]) >> shift) + (((int64_t)lastYLow_0[2] * LowCoeffs_B_LP[2]) >> shift)
-    //      + (((int64_t)lastYLow_1[1] * LowCoeffs_A_LP[0]) >> shift) + (((int64_t)lastYLow_1[2] * LowCoeffs_A_LP[1]) >> shift);
-
-    //clocks[it] = esp_cpu_get_cycle_count() - start;
-
-    // lastYLow_1[0] = lastXR[0];
-    // lastYLow_1[1] = lastXR[1];
-
-    // lastYMid_R_1[0] = lastXR[0];
-    // lastYMid_R_1[1] = lastXR[1];
-
-    // lastYMid_L_1[0] = lastXL[0];
-    // lastYMid_L_1[1] = lastXL[1];
-
-    // lastYHigh_1[0] = lastXR[0];
-    // lastYHigh_1[1] = lastXR[1];
-
 
     // lastYLow_1[0] = lastX_low[0];
     // lastYLow_1[1] = lastX_low[1];
@@ -281,19 +180,6 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
 
     // lastYHigh_1[0] = lastX_high[0];
     // lastYHigh_1[1] = lastX_high[1];
-
-    // it++;
-    // if (it == 4095)
-    // {
-    //     for (size_t i = 1; i < 4096; i++)
-    //     {
-    //         sum += clocks[i];
-    //     }
-    //     printf("Avg calc cycles: %llu\n", sum >> 12);
-    //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
-    //     sum = 0;
-    //     it = 0;
-    // }
 }
 
 int16_t main_volume;
@@ -301,7 +187,7 @@ int16_t high_volume;
 int16_t mid_volume;
 int16_t low_volume;
 
-static inline void pushNewX(int32_t *newSample){ // clocks: 954, wenn filter funktion auskommentiert
+static inline void IRAM_ATTR pushNewX(int32_t *newSample){ // clocks: 954, wenn filter funktion auskommentiert
     //uint32_t start = esp_cpu_get_cycle_count();
     // for (int i = 5; i >= 2; --i) {
     //     lastX_high[i] = lastX_high[i-2];
@@ -317,48 +203,6 @@ static inline void pushNewX(int32_t *newSample){ // clocks: 954, wenn filter fun
     lastX_midR[5] = lastX_midR[3]; lastX_midR[4] = lastX_midR[2]; lastX_midR[3] = lastX_midR[1]; lastX_midR[2] = lastX_midR[0];
     lastX_midL[5] = lastX_midL[3]; lastX_midL[4] = lastX_midL[2]; lastX_midL[3] = lastX_midL[1]; lastX_midL[2] = lastX_midL[0];
     lastX_low[5]  = lastX_low[3];  lastX_low[4]  = lastX_low[2];  lastX_low[3]  = lastX_low[1];  lastX_low[2]  = lastX_low[0];
-
-    // clocks[it] = esp_cpu_get_cycle_count() - start;
-    // it++;
-    // if (it == 4095)
-    // {
-    //     for (size_t i = 1; i < 4096; i++)
-    //     {
-    //         sum += clocks[i];
-    //     }
-    //     printf("Avg calc cycles: %llu\n", sum >> 12);
-    //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
-    //     sum = 0;
-    //     it = 0;
-    // }
-
-    // {
-    //     int32_t L = newSample[0];
-    //     int32_t R = newSample[1];
-
-    //     int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-    //     int64_t left  = ((int64_t)L * main_volume) >> 12;
-    //     int64_t right = ((int64_t)R * main_volume) >> 12;
-
-    //     lastX_high[1] = ((mono  * high_volume) >> 12);
-    //     lastX_low[1]  = ((mono  * low_volume)  >> 12);
-    //     lastX_midL[1] = ((left  * mid_volume)  >> 12);
-    //     lastX_midR[1] = ((right * mid_volume)  >> 12);
-    // }
-
-    // {
-    //     int32_t L = newSample[3];
-    //     int32_t R = newSample[2];
-
-    //     int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-    //     int64_t left  = ((int64_t)L * main_volume) >> 12;
-    //     int64_t right = ((int64_t)R * main_volume) >> 12;
-
-    //     lastX_high[0] = ((mono  * high_volume) >> 12);
-    //     lastX_low[0]  = ((mono  * low_volume)  >> 12);
-    //     lastX_midL[0] = ((left  * mid_volume)  >> 12);
-    //     lastX_midR[0] = ((right * mid_volume) >> 12);
-    // }
 
     {
         int32_t L = newSample[0];
@@ -404,8 +248,7 @@ static inline void pushNewX(int32_t *newSample){ // clocks: 954, wenn filter fun
 }
 
 
-
-static inline void mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
+static inline void IRAM_ATTR mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
     H_L_Buf[0] = (int32_t)lastYHigh_1[1];
     M_Buf[0] = (int32_t)lastYMid_R_1[1];
     M_Buf[1] = (int32_t)lastYMid_L_1[1];
@@ -416,193 +259,7 @@ static inline void mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
     M_Buf[3] = (int32_t)lastYMid_L_1[0];
     H_L_Buf[3] = (int32_t)lastYLow_1[0];
 }
-static inline void IRAM_ATTR processSample(int32_t *restrict input, int32_t *restrict M_Buf, int32_t *restrict H_L_Buf) {
-    // =============================================
-    // 1. Neue Samples in die X-Puffer schreiben
-    // =============================================
-    // Verschiebe alte X-Werte (manuell, schneller als memmove)
-    lastX_high[5] = lastX_high[3]; lastX_high[4] = lastX_high[2]; lastX_high[3] = lastX_high[1]; lastX_high[2] = lastX_high[0];
-    lastX_midR[5] = lastX_midR[3]; lastX_midR[4] = lastX_midR[2]; lastX_midR[3] = lastX_midR[1]; lastX_midR[2] = lastX_midR[0];
-    lastX_midL[5] = lastX_midL[3]; lastX_midL[4] = lastX_midL[2]; lastX_midL[3] = lastX_midL[1]; lastX_midL[2] = lastX_midL[0];
-    lastX_low[5]  = lastX_low[3];  lastX_low[4]  = lastX_low[2];  lastX_low[3]  = lastX_low[1];  lastX_low[2]  = lastX_low[0];
 
-    // Berechne neue X-Werte (mit Volume-Skalierung)
-    {
-        int32_t L = input[0];
-        int32_t R = input[1];
-        int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-        int64_t left  = ((int64_t)L * main_volume) >> 12;
-        int64_t right = ((int64_t)R * main_volume) >> 12;
-        lastX_high[1] = (int32_t)((mono  * high_volume) >> 12);
-        lastX_low[1]  = (int32_t)((mono  * low_volume)  >> 12);
-        lastX_midL[1] = (int32_t)((left  * mid_volume)  >> 12);
-        lastX_midR[1] = (int32_t)((right * mid_volume)  >> 12);
-    }
-    {
-        int32_t L = input[3];
-        int32_t R = input[2];
-        int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-        int64_t left  = ((int64_t)L * main_volume) >> 12;
-        int64_t right = ((int64_t)R * main_volume) >> 12;
-        lastX_high[0] = (int32_t)((mono  * high_volume) >> 12);
-        lastX_low[0]  = (int32_t)((mono  * low_volume)  >> 12);
-        lastX_midL[0] = (int32_t)((left  * mid_volume)  >> 12);
-        lastX_midR[0] = (int32_t)((right * mid_volume)  >> 12);
-    }
-
-    // =============================================
-    // 2. Verschiebe die letzten Y-Werte (manuell)
-    // =============================================
-    lastYHigh_0[5] = lastYHigh_0[3]; lastYHigh_0[4] = lastYHigh_0[2]; lastYHigh_0[3] = lastYHigh_0[1]; lastYHigh_0[2] = lastYHigh_0[0];
-    lastYHigh_1[5] = lastYHigh_1[3]; lastYHigh_1[4] = lastYHigh_1[2]; lastYHigh_1[3] = lastYHigh_1[1]; lastYHigh_1[2] = lastYHigh_1[0];
-    lastYMid_R_0[5] = lastYMid_R_0[3]; lastYMid_R_0[4] = lastYMid_R_0[2]; lastYMid_R_0[3] = lastYMid_R_0[1]; lastYMid_R_0[2] = lastYMid_R_0[0];
-    lastYMid_R_1[5] = lastYMid_R_1[3]; lastYMid_R_1[4] = lastYMid_R_1[2]; lastYMid_R_1[3] = lastYMid_R_1[1]; lastYMid_R_1[2] = lastYMid_R_1[0];
-    lastYMid_L_0[5] = lastYMid_L_0[3]; lastYMid_L_0[4] = lastYMid_L_0[2]; lastYMid_L_0[3] = lastYMid_L_0[1]; lastYMid_L_0[2] = lastYMid_L_0[0];
-    lastYMid_L_1[5] = lastYMid_L_1[3]; lastYMid_L_1[4] = lastYMid_L_1[2]; lastYMid_L_1[3] = lastYMid_L_1[1]; lastYMid_L_1[2] = lastYMid_L_1[0];
-    lastYLow_0[5]   = lastYLow_0[3];   lastYLow_0[4]   = lastYLow_0[2];   lastYLow_0[3]   = lastYLow_0[1];   lastYLow_0[2]   = lastYLow_0[0];
-    lastYLow_1[5]   = lastYLow_1[3];   lastYLow_1[4]   = lastYLow_1[2];   lastYLow_1[3]   = lastYLow_1[1];   lastYLow_1[2]   = lastYLow_1[0];
-
-    // =============================================
-    // 3. Filterberechnung (High Band)
-    // =============================================
-    // High: HP (3887Hz)
-    int64_t acc = 0;
-    acc  = (int64_t)lastX_high[1] * HighCoeffs_B_HP[0];
-    acc += (int64_t)lastX_high[2] * HighCoeffs_B_HP[1];
-    acc += (int64_t)lastX_high[3] * HighCoeffs_B_HP[2];
-    acc += (int64_t)lastYHigh_0[3] * HighCoeffs_A_HP[0];
-    acc += (int64_t)lastYHigh_0[4] * HighCoeffs_A_HP[1];
-    lastYHigh_0[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastX_high[0] * HighCoeffs_B_HP[0];
-    acc += (int64_t)lastX_high[1] * HighCoeffs_B_HP[1];
-    acc += (int64_t)lastX_high[2] * HighCoeffs_B_HP[2];
-    acc += (int64_t)lastYHigh_0[2] * HighCoeffs_A_HP[0];
-    acc += (int64_t)lastYHigh_0[3] * HighCoeffs_A_HP[1];
-    lastYHigh_0[0] = (int32_t)(acc >> shift);
-
-    // High: LP (23000Hz)
-    acc  = (int64_t)lastYHigh_0[1] * HighCoeffs_B_LP[0];
-    acc += (int64_t)lastYHigh_0[2] * HighCoeffs_B_LP[1];
-    acc += (int64_t)lastYHigh_0[3] * HighCoeffs_B_LP[2];
-    acc += (int64_t)lastYHigh_1[3] * HighCoeffs_A_LP[0];
-    acc += (int64_t)lastYHigh_1[4] * HighCoeffs_A_LP[1];
-    lastYHigh_1[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastYHigh_0[0] * HighCoeffs_B_LP[0];
-    acc += (int64_t)lastYHigh_0[1] * HighCoeffs_B_LP[1];
-    acc += (int64_t)lastYHigh_0[2] * HighCoeffs_B_LP[2];
-    acc += (int64_t)lastYHigh_1[2] * HighCoeffs_A_LP[0];
-    acc += (int64_t)lastYHigh_1[3] * HighCoeffs_A_LP[1];
-    lastYHigh_1[0] = (int32_t)(acc >> shift);
-
-    // =============================================
-    // 4. Filterberechnung (Mid Band, Right)
-    // =============================================
-    // Mid Right: HP (203Hz)
-    acc  = (int64_t)lastX_midR[1] * MidCoeffs_B_HP[0];
-    acc += (int64_t)lastX_midR[2] * MidCoeffs_B_HP[1];
-    acc += (int64_t)lastX_midR[3] * MidCoeffs_B_HP[2];
-    acc += (int64_t)lastYMid_R_0[3] * MidCoeffs_A_HP[0];
-    acc += (int64_t)lastYMid_R_0[4] * MidCoeffs_A_HP[1];
-    lastYMid_R_0[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastX_midR[0] * MidCoeffs_B_HP[0];
-    acc += (int64_t)lastX_midR[1] * MidCoeffs_B_HP[1];
-    acc += (int64_t)lastX_midR[2] * MidCoeffs_B_HP[2];
-    acc += (int64_t)lastYMid_R_0[2] * MidCoeffs_A_HP[0];
-    acc += (int64_t)lastYMid_R_0[3] * MidCoeffs_A_HP[1];
-    lastYMid_R_0[0] = (int32_t)(acc >> shift);
-
-    // Mid Right: LP (3483Hz)
-    acc  = (int64_t)lastYMid_R_0[1] * MidCoeffs_B_LP[0];
-    acc += (int64_t)lastYMid_R_0[2] * MidCoeffs_B_LP[1];
-    acc += (int64_t)lastYMid_R_0[3] * MidCoeffs_B_LP[2];
-    acc += (int64_t)lastYMid_R_1[3] * MidCoeffs_A_LP[0];
-    acc += (int64_t)lastYMid_R_1[4] * MidCoeffs_A_LP[1];
-    lastYMid_R_1[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastYMid_R_0[0] * MidCoeffs_B_LP[0];
-    acc += (int64_t)lastYMid_R_0[1] * MidCoeffs_B_LP[1];
-    acc += (int64_t)lastYMid_R_0[2] * MidCoeffs_B_LP[2];
-    acc += (int64_t)lastYMid_R_1[2] * MidCoeffs_A_LP[0];
-    acc += (int64_t)lastYMid_R_1[3] * MidCoeffs_A_LP[1];
-    lastYMid_R_1[0] = (int32_t)(acc >> shift);
-
-    // =============================================
-    // 5. Filterberechnung (Mid Band, Left)
-    // =============================================
-    // Mid Left: HP (203Hz)
-    acc  = (int64_t)lastX_midL[1] * MidCoeffs_B_HP[0];
-    acc += (int64_t)lastX_midL[2] * MidCoeffs_B_HP[1];
-    acc += (int64_t)lastX_midL[3] * MidCoeffs_B_HP[2];
-    acc += (int64_t)lastYMid_L_0[3] * MidCoeffs_A_HP[0];
-    acc += (int64_t)lastYMid_L_0[4] * MidCoeffs_A_HP[1];
-    lastYMid_L_0[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastX_midL[0] * MidCoeffs_B_HP[0];
-    acc += (int64_t)lastX_midL[1] * MidCoeffs_B_HP[1];
-    acc += (int64_t)lastX_midL[2] * MidCoeffs_B_HP[2];
-    acc += (int64_t)lastYMid_L_0[2] * MidCoeffs_A_HP[0];
-    acc += (int64_t)lastYMid_L_0[3] * MidCoeffs_A_HP[1];
-    lastYMid_L_0[0] = (int32_t)(acc >> shift);
-
-    // Mid Left: LP (3483Hz)
-    acc  = (int64_t)lastYMid_L_0[1] * MidCoeffs_B_LP[0];
-    acc += (int64_t)lastYMid_L_0[2] * MidCoeffs_B_LP[1];
-    acc += (int64_t)lastYMid_L_0[3] * MidCoeffs_B_LP[2];
-    acc += (int64_t)lastYMid_L_1[3] * MidCoeffs_A_LP[0];
-    acc += (int64_t)lastYMid_L_1[4] * MidCoeffs_A_LP[1];
-    lastYMid_L_1[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastYMid_L_0[0] * MidCoeffs_B_LP[0];
-    acc += (int64_t)lastYMid_L_0[1] * MidCoeffs_B_LP[1];
-    acc += (int64_t)lastYMid_L_0[2] * MidCoeffs_B_LP[2];
-    acc += (int64_t)lastYMid_L_1[2] * MidCoeffs_A_LP[0];
-    acc += (int64_t)lastYMid_L_1[3] * MidCoeffs_A_LP[1];
-    lastYMid_L_1[0] = (int32_t)(acc >> shift);
-
-    // =============================================
-    // 6. Filterberechnung (Low Band)
-    // =============================================
-    // Low: HP (17Hz)
-    acc  = (int64_t)lastX_low[1] * LowCoeffs_B_HP[0];
-    acc += (int64_t)lastX_low[2] * LowCoeffs_B_HP[1];
-    acc += (int64_t)lastYLow_0[3] * LowCoeffs_A_HP;
-    lastYLow_0[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastX_low[0] * LowCoeffs_B_HP[0];
-    acc += (int64_t)lastX_low[1] * LowCoeffs_B_HP[1];
-    acc += (int64_t)lastYLow_0[2] * LowCoeffs_A_HP;
-    lastYLow_0[0] = (int32_t)(acc >> shift);
-
-    // Low: LP (178Hz)
-    acc  = (int64_t)lastYLow_0[1] * LowCoeffs_B_LP[0];
-    acc += (int64_t)lastYLow_0[2] * LowCoeffs_B_LP[1];
-    acc += (int64_t)lastYLow_0[3] * LowCoeffs_B_LP[2];
-    acc += (int64_t)lastYLow_1[3] * LowCoeffs_A_LP[0];
-    acc += (int64_t)lastYLow_1[4] * LowCoeffs_A_LP[1];
-    lastYLow_1[1] = (int32_t)(acc >> shift);
-
-    acc  = (int64_t)lastYLow_0[0] * LowCoeffs_B_LP[0];
-    acc += (int64_t)lastYLow_0[1] * LowCoeffs_B_LP[1];
-    acc += (int64_t)lastYLow_0[2] * LowCoeffs_B_LP[2];
-    acc += (int64_t)lastYLow_1[2] * LowCoeffs_A_LP[0];
-    acc += (int64_t)lastYLow_1[3] * LowCoeffs_A_LP[1];
-    lastYLow_1[0] = (int32_t)(acc >> shift);
-
-    // =============================================
-    // 7. Output-Mapping
-    // =============================================
-    H_L_Buf[0] = lastYHigh_1[1];
-    M_Buf[0]   = lastYMid_R_1[1];
-    M_Buf[1]   = lastYMid_L_1[1];
-    H_L_Buf[1] = lastYLow_1[1];
-    H_L_Buf[2] = lastYHigh_1[0];
-    M_Buf[2]   = lastYMid_R_1[0];
-    M_Buf[3]   = lastYMid_L_1[0];
-    H_L_Buf[3] = lastYLow_1[0];
-}
 
 static i2s_chan_handle_t                tx_chan_1;
 static i2s_chan_handle_t                tx_chan_2;       
@@ -612,49 +269,37 @@ static i2s_chan_handle_t                rx_chan;
 static inline void fiter(void *args)
 {
     int32_t *r_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    // int32_t *w_buf1 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    // assert(r_buf); 
-    // assert(w_buf1);
-    
-    // // int32_t *testBuf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    // int32_t *w_buf2 = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    // assert(w_buf2);
-    // assert(testBuf);
-
-
     int32_t *M_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *H_L_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-        
-    assert(M_Buf); 
-    assert(H_L_Buf);
-
+    
     size_t r_bytes = 0;
     size_t w_bytes = 0;
 
     ESP_ERROR_CHECK(i2s_channel_enable(rx_chan));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_1));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));
+
     while (true) {
         if (i2s_channel_read(rx_chan, r_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
-            uint32_t start = esp_cpu_get_cycle_count();
+            //uint32_t start = esp_cpu_get_cycle_count();
             pushNewX(r_buf);
             calculateY(M_Buf, H_L_Buf);
             mapOutput(M_Buf, H_L_Buf);
             //processSample(r_buf, M_Buf, H_L_Buf);
 
-            clocks[it] = esp_cpu_get_cycle_count() - start;
-            it++;
-            if (it == 4095)
-            {
-                for (size_t i = 1; i < 4096; i++)
-                {
-                    sum += clocks[i];
-                }
-                printf("Avg calc cycles: %llu\n", sum >> 12);
-                //printf("Avg calc cycles: %lu\n", clocks[4096]);
-                sum = 0;
-                it = 0;
-            }
+            // clocks[it] = esp_cpu_get_cycle_count() - start;
+            // it++;
+            // if (it == 4095)
+            // {
+            //     for (size_t i = 1; i < 4096; i++)
+            //     {
+            //         sum += clocks[i];
+            //     }
+            //     printf("Avg calc cycles: %llu\n", sum >> 12);
+            //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
+            //     sum = 0;
+            //     it = 0;
+            // }
 
             i2s_channel_write(tx_chan_1, M_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
             i2s_channel_write(tx_chan_2, H_L_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
@@ -770,6 +415,48 @@ void init_adc() {
     adc_oneshot_config_channel(adc_handle, ADC_CHANNEL_0, &chan_cfg); // Pin 11
 }
 
+const float PotiCoeffs_A[2] = { 1.64745998,  -0.70089678 }; // lp wn=2Hz fs=50Hz
+const float PotiCoeffs_B[3] = { 0.0133592, 0.0267184, 0.0133592 };
+
+int16_t lastPotiMain_Y[3] = {0};
+int16_t lastPotiHigh_Y[3] = {0};
+int16_t lastPotiMid_Y[3] = {0};
+int16_t lastPotiLow_Y[3] = {0};
+
+int16_t lastPotiMain_X[3] = {0};
+int16_t lastPotiHigh_X[3] = {0};
+int16_t lastPotiMid_X[3] = {0};
+int16_t lastPotiLow_X[3] = {0};
+
+void filterPoti(int16_t *Xarr, int16_t *Yarr){// should be changed to integer logic
+    for (int i = 2; i >= 1; i--) {
+        Yarr[i] = Yarr[i - 1];
+    }
+
+    Yarr[0] = (Xarr[0] * PotiCoeffs_B[0]) + (Xarr[1] * PotiCoeffs_B[1]) + (Xarr[2] * PotiCoeffs_B[2])
+            + (Yarr[1] * PotiCoeffs_A[0]) + (Yarr[2] * PotiCoeffs_A[1]);
+}
+
+void filterPotis(void){
+    filterPoti(lastPotiMain_X, lastPotiMain_Y);
+    filterPoti(lastPotiHigh_X, lastPotiHigh_Y);
+    filterPoti(lastPotiMid_X, lastPotiMid_Y);
+    filterPoti(lastPotiLow_X, lastPotiLow_Y);
+}
+
+void shiftPotiArr(int16_t main, int16_t high, int16_t mid, int16_t low){
+    for (int i = 2; i >= 1; i--) {
+        lastPotiMain_X[i] = lastPotiMain_X[i - 1];
+        lastPotiHigh_X[i] = lastPotiHigh_X[i - 1];
+        lastPotiMid_X[i] = lastPotiMid_X[i - 1];
+        lastPotiLow_X[i] = lastPotiLow_X[i - 1];
+    }
+    lastPotiMain_X[0] = main;
+    lastPotiHigh_X[0] = high;
+    lastPotiMid_X[0] = mid;
+    lastPotiLow_X[0] = low;
+}
+
 int16_t read_adc(adc_channel_t channel) {
     int raw;
     adc_oneshot_read(adc_handle, channel, &raw);
@@ -777,25 +464,49 @@ int16_t read_adc(adc_channel_t channel) {
 }
 
 int16_t make_exponential(int16_t x){
-    return x *= pow(((float)x/4096), 2);
+    return 4095 * pow(((float)x/4095), 2);
 }
 
 const float high_Limit = 0.3;
 const float mid_Limit = 0.3;
 const float low_Limit = 0.3;
 
+int16_t clamp12bit(int16_t x){
+    if(x >= 4095){
+        return 4095;
+    }
+    else if(x <= 0){
+        return 0;
+    }
+    else{
+        return x;
+    }
+}
 void get_volumes(){
-    main_volume = make_exponential(read_adc(ADC_CHANNEL_3));  // Pin 14
-    high_volume = make_exponential(read_adc(ADC_CHANNEL_2)) * high_Limit;  // Pin 13
-    mid_volume = make_exponential(read_adc(ADC_CHANNEL_1)) * mid_Limit;  // Pin 12
-    low_volume = make_exponential(read_adc(ADC_CHANNEL_0)) * low_Limit;  // Pin 11
+    int16_t mainADC = read_adc(ADC_CHANNEL_3);// Pin 14 will be changed mabye 
+    int16_t highADC = read_adc(ADC_CHANNEL_2);// Pin 13
+    int16_t midADC = read_adc(ADC_CHANNEL_1);// Pin 12
+    int16_t lowADC = read_adc(ADC_CHANNEL_0);// Pin 11
+
+    shiftPotiArr(mainADC, highADC, midADC, lowADC);
+
+    filterPotis();
+
+    // printf("X: %d\n", clamp12bit(lastPotiMain_X[0]));
+    // printf("Y: %d\n\n", clamp12bit(lastPotiMain_Y[0]));
+    main_volume = make_exponential(clamp12bit(lastPotiMain_Y[0]));  
+    high_volume = clamp12bit(lastPotiHigh_Y[0]) * high_Limit;  
+    mid_volume = clamp12bit(lastPotiMid_Y[0]) * mid_Limit;  
+    low_volume = clamp12bit(lastPotiLow_Y[0]) * low_Limit;  
+
+    // printf("Main: %d\n", main_volume);
 }
 
 void volumeControll(){
     while (true)
     {
         get_volumes();
-        vTaskDelay(pdMS_TO_TICKS(100));
+        vTaskDelay(pdMS_TO_TICKS(20));
         // printf("main: %d\n", main_volume);
         // printf("high: %d\n", high_volume);
         // printf("mid: %d\n", mid_volume);
@@ -807,7 +518,7 @@ void app_main(void)
 {    
     init_i2s();
     init_adc();
-    //xTaskCreate(i2s_example_read_task, "i2s_example_read_task", 4096, NULL, 0, NULL);
+    
     xTaskCreatePinnedToCore(volumeControll, "volumeControll", 4096, NULL, 2, NULL, 0);
     xTaskCreatePinnedToCore(fiter, "filter", 4096, NULL, 0, NULL, 1);
 }

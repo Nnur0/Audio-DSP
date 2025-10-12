@@ -1,0 +1,125 @@
+-----------Test 1-------------
+
+Version 1: 
+    for (int i = 5; i >= 2; i--) {
+        lastYHigh_0[i] = lastYHigh_0[i - 2];
+        lastYHigh_1[i] = lastYHigh_1[i - 2];
+
+        lastYMid_R_0[i] = lastYMid_R_0[i - 2];
+        lastYMid_R_1[i] = lastYMid_R_1[i - 2];
+
+        lastYMid_L_0[i] = lastYMid_L_0[i - 2];
+        lastYMid_L_1[i] = lastYMid_L_1[i - 2];
+
+        lastYLow_0[i] = lastYLow_0[i - 2];
+        lastYLow_1[i] = lastYLow_1[i - 2];
+    }
+->
+Avg calc cycles: 5233
+Avg calc cycles: 5233
+Avg calc cycles: 6406
+Avg calc cycles: 5233
+Avg calc cycles: 5820
+Avg calc cycles: 6406
+Avg calc cycles: 5819
+Avg calc cycles: 5819
+Avg calc cycles: 4647
+Avg calc cycles: 5233
+Avg calc cycles: 5819
+Avg calc cycles: 5820
+
+
+Version 2: 	
+	memmove(&lastYHigh_0[2], &lastYHigh_0[0], 4 * sizeof(lastYHigh_0[0]));
+    memmove(&lastYHigh_1[2], &lastYHigh_1[0], 4 * sizeof(lastYHigh_1[0]));
+    memmove(&lastYMid_R_0[2], &lastYMid_R_0[0], 4 * sizeof(lastYMid_R_0[0]));
+    memmove(&lastYMid_R_1[2], &lastYMid_R_1[0], 4 * sizeof(lastYMid_R_1[0]));
+    memmove(&lastYMid_L_0[2], &lastYMid_L_0[0], 4 * sizeof(lastYMid_L_0[0]));
+    memmove(&lastYMid_L_1[2], &lastYMid_L_1[0], 4 * sizeof(lastYMid_L_1[0]));
+    memmove(&lastYLow_0[2],  &lastYLow_0[0],  4 * sizeof(lastYLow_0[0]));
+    memmove(&lastYLow_1[2],  &lastYLow_1[0],  4 * sizeof(lastYLow_1[0]));
+-> 
+Avg calc cycles: 5819
+Avg calc cycles: 5233
+Avg calc cycles: 5820
+Avg calc cycles: 5233
+Avg calc cycles: 5233
+Avg calc cycles: 6406
+Avg calc cycles: 5819
+Avg calc cycles: 5820
+Avg calc cycles: 6406
+Avg calc cycles: 6406
+Avg calc cycles: 6406
+Avg calc cycles: 5820
+Avg calc cycles: 6406
+Avg calc cycles: 5820
+Avg calc cycles: 6406
+Avg calc cycles: 6992
+Avg calc cycles: 5233
+
+
+Version 3:
+    lastYHigh_0[5] = lastYHigh_0[3]; lastYHigh_0[4] = lastYHigh_0[2]; lastYHigh_0[3] = lastYHigh_0[1]; lastYHigh_0[2] = lastYHigh_0[0];
+    lastYHigh_1[5] = lastYHigh_1[3]; lastYHigh_1[4] = lastYHigh_1[2]; lastYHigh_1[3] = lastYHigh_1[1]; lastYHigh_1[2] = lastYHigh_1[0];
+    lastYMid_R_0[5] = lastYMid_R_0[3]; lastYMid_R_0[4] = lastYMid_R_0[2]; lastYMid_R_0[3] = lastYMid_R_0[1]; lastYMid_R_0[2] = lastYMid_R_0[0];
+    lastYMid_R_1[5] = lastYMid_R_1[3]; lastYMid_R_1[4] = lastYMid_R_1[2]; lastYMid_R_1[3] = lastYMid_R_1[1]; lastYMid_R_1[2] = lastYMid_R_1[0];
+    lastYMid_L_0[5] = lastYMid_L_0[3]; lastYMid_L_0[4] = lastYMid_L_0[2]; lastYMid_L_0[3] = lastYMid_L_0[1]; lastYMid_L_0[2] = lastYMid_L_0[0];
+    lastYMid_L_1[5] = lastYMid_L_1[3]; lastYMid_L_1[4] = lastYMid_L_1[2]; lastYMid_L_1[3] = lastYMid_L_1[1]; lastYMid_L_1[2] = lastYMid_L_1[0];
+    lastYLow_0[5]   = lastYLow_0[3];   lastYLow_0[4]   = lastYLow_0[2];   lastYLow_0[3]   = lastYLow_0[1];   lastYLow_0[2]   = lastYLow_0[0];
+    lastYLow_1[5]   = lastYLow_1[3];   lastYLow_1[4]   = lastYLow_1[2];   lastYLow_1[3]   = lastYLow_1[1];   lastYLow_1[2]   = lastYLow_1[0];
+->
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+
+
+-----------Test 2-------------
+
+Fucs: pushNewX, calculateY, mapOutput
+
+defined as void ... ->
+Avg calc cycles: 1898
+Avg calc cycles: 1311
+Avg calc cycles: 3070
+Avg calc cycles: 2484
+Avg calc cycles: 2484
+Avg calc cycles: 2484
+Avg calc cycles: 3070
+Avg calc cycles: 3657
+Avg calc cycles: 3070
+Avg calc cycles: 3657
+Avg calc cycles: 3071
+Avg calc cycles: 3070
+Avg calc cycles: 3657
+Avg calc cycles: 3070
+Avg calc cycles: 3657
+Avg calc cycles: 3071
+Avg calc cycles: 3070
+Avg calc cycles: 3657
+Avg calc cycles: 3071
+Avg calc cycles: 3657
+Avg calc cycles: 3070
+
+defined as static inline void ... SAME AS static inline void IRAM_ATTR ... ->
+Avg calc cycles: 1590
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+Avg calc cycles: 2176
+
+
+
+Weiteres Verbesserungspotential durch inline ASM
