@@ -23,7 +23,7 @@
 #define DOUT_1    GPIO_NUM_46 // old: 9
 #define DOUT_2    GPIO_NUM_5 // old: 5
 
-#define samples 240
+#define samples 480 // max: 960
 #define EXAMPLE_BUFF_SIZE              samples * 2 * sizeof(int32_t)//64
 #define CLOCK   48000    
 
@@ -51,10 +51,10 @@ const int64_t LowCoeffs_B_LP[3] = { 143309, 286617, 143309 };
 // a * y
 // b * x
 
-int16_t main_volume;
-int16_t high_volume;
-int16_t mid_volume;
-int16_t low_volume;
+volatile int16_t main_volume;
+volatile int16_t high_volume;
+volatile int16_t mid_volume;
+volatile int16_t low_volume;
 
 #define Q_SHIFT 30
 
@@ -136,8 +136,9 @@ static inline void IRAM_ATTR process_block(
         int32_t R = in_buf[2*i + 1];
 
         // ---- Volume ----
+        L = ((int64_t)L * main_volume)>> 12;
+        R = ((int64_t)R * main_volume)>> 12;
         int64_t mono = ((int64_t)L + R) >> 1;
-        mono = (mono * main_volume) >> 12;
 
         int32_t midL = ((int64_t)L * mid_volume) >> 12;
         int32_t midR = ((int64_t)R * mid_volume) >> 12;
@@ -199,9 +200,9 @@ static inline void fiter(void *args)
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));    
 
     while (true) {
-        if (i2s_channel_read(rx_chan, in_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 10) == ESP_OK) {
-            uint32_t start = esp_cpu_get_cycle_count();
-            if (r_bytes != EXAMPLE_BUFF_SIZE) printf("Bytes: %d\n", r_bytes);
+        if (i2s_channel_read(rx_chan, in_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
+            // uint32_t start = esp_cpu_get_cycle_count();
+            // if (r_bytes != EXAMPLE_BUFF_SIZE) printf("Bytes: %d\n", r_bytes);
             size_t frames = r_bytes / (2 * sizeof(int32_t));
             process_block(in_buf, M_Buf, H_L_Buf, frames);
 
@@ -213,19 +214,19 @@ static inline void fiter(void *args)
             // calculateY(M_Buf, H_L_Buf);
             // mapOutput(M_Buf, H_L_Buf);
 
-            clocks[it] = esp_cpu_get_cycle_count() - start;
-            it++;
-            if (it == 1023)
-            {
-                for (size_t i = 0; i < 1024; i++)
-                {
-                    sum += clocks[i];
-                }
-                printf("Avg calc cycles: %llu\n", sum >> 10);
-                //printf("Avg calc cycles: %lu\n", clocks[4096]);
-                sum = 0;
-                it = 0;
-            }
+            // clocks[it] = esp_cpu_get_cycle_count() - start;
+            // it++;
+            // if (it == 1023)
+            // {
+            //     for (size_t i = 0; i < 1024; i++)
+            //     {
+            //         sum += clocks[i];
+            //     }
+            //     printf("Avg calc cycles: %llu\n", sum >> 10);
+            //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
+            //     sum = 0;
+            //     it = 0;
+            // }
 
             //i2s_channel_write(tx_chan_1, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 10); // <---- M_buf
             //i2s_channel_write(tx_chan_2, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
