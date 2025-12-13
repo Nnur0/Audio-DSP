@@ -123,3 +123,87 @@ Avg calc cycles: 2176
 
 
 Weiteres Verbesserungspotential durch inline ASM
+
+
+
+
+Test nur func:
+Version 1:
+
+for (int i = 5; i >= 2; --i) {
+        lastX_high[i] = lastX_high[i-2];
+        lastX_midR[i] = lastX_midR[i-2];
+        lastX_midL[i] = lastX_midL[i-2];
+        lastX_low[i]  = lastX_low[i-2];
+    }
+->
+Avg calc cycles: 714
+Avg calc cycles: 1301
+Avg calc cycles: 1301
+Avg calc cycles: 1301
+Avg calc cycles: 1301
+Avg calc cycles: 714
+Avg calc cycles: 1301
+Avg calc cycles: 1887
+Avg calc cycles: 1301
+Avg calc cycles: 1887
+Avg calc cycles: 714
+Avg calc cycles: 1301
+Avg calc cycles: 714
+Avg calc cycles: 1301
+Avg calc cycles: 1887
+
+
+
+
+
+
+Version 2:
+
+memmove(&lastX_high[2], &lastX_high[0], 4 * sizeof(lastX_high[0]));
+memmove(&lastX_midR[2], &lastX_midR[0], 4 * sizeof(lastX_midR[0]));
+memmove(&lastX_midL[2], &lastX_midL[0], 4 * sizeof(lastX_midL[0]));
+memmove(&lastX_low[2],  &lastX_low[0],  4 * sizeof(lastX_low[0]));
+->
+Avg calc cycles: 1887
+Avg calc cycles: 1301
+Avg calc cycles: 714
+Avg calc cycles: 1887
+Avg calc cycles: 714
+Avg calc cycles: 714
+Avg calc cycles: 714
+Avg calc cycles: 1887
+Avg calc cycles: 1301
+Avg calc cycles: 714
+Avg calc cycles: 1301
+Avg calc cycles: 1887
+Avg calc cycles: 1887
+Avg calc cycles: 1301
+Avg calc cycles: 1301
+
+
+
+Version 3:
+
+    lastX_high[5] = lastX_high[3]; lastX_high[4] = lastX_high[2]; lastX_high[3] = lastX_high[1]; lastX_high[2] = lastX_high[0];
+    lastX_midR[5] = lastX_midR[3]; lastX_midR[4] = lastX_midR[2]; lastX_midR[3] = lastX_midR[1]; lastX_midR[2] = lastX_midR[0];
+    lastX_midL[5] = lastX_midL[3]; lastX_midL[4] = lastX_midL[2]; lastX_midL[3] = lastX_midL[1]; lastX_midL[2] = lastX_midL[0];
+    lastX_low[5]  = lastX_low[3];  lastX_low[4]  = lastX_low[2];  lastX_low[3]  = lastX_low[1];  lastX_low[2]  = lastX_low[0];
+->
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 70
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 656
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 70
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 69
+Avg calc cycles: 69

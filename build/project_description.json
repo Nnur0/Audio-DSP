@@ -1,7 +1,7 @@
 {
     "version":            "1.1",
     "project_name":       "project-name",
-    "project_version":    "ce47a90-dirty",
+    "project_version":    "36783b8-dirty",
     "project_path":       "C:/Projekte/Box/project-name",
     "idf_path":           "C:/Users/savel/esp/v5.4/esp-idf",
     "build_dir":          "C:/Projekte/Box/project-name/build",
@@ -685,7 +685,7 @@
             "managed_reqs": [],
             "managed_priv_reqs": [],
             "file": "C:/Projekte/Box/project-name/build/esp-idf/main/libmain.a",
-            "sources": [ "C:/Projekte/Box/project-name/main/i2s_std_example_main.c" ],
+            "sources": [ "C:/Projekte/Box/project-name/main/main.c" ],
             "include_dirs": [ ".", "C:/Users/savel/esp/v5.4/esp-idf/examples/peripherals/i2s/common" ]
         },
         "mbedtls": {

@@ -1,19 +1,19 @@
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
+//#include <stdint.h>
+//#include <stdlib.h>
+//#include <string.h>
 #include <tgmath.h>
 
 #include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
+//#include "freertos/task.h"
 
 #include "driver/i2s_std.h"
-#include "driver/gpio.h"
-#include "esp_check.h"
-#include "sdkconfig.h"
+//#include "driver/gpio.h"
+//#include "esp_check.h"
+//#include "sdkconfig.h"
 
 #include "esp_adc/adc_oneshot.h"
-#include "esp_adc/adc_cali.h"
-#include "esp_adc/adc_cali_scheme.h"
+//#include "esp_adc/adc_cali.h"
+//#include "esp_adc/adc_cali_scheme.h"
 
 
 #define BCLK   GPIO_NUM_4   // old: 4
@@ -44,7 +44,6 @@ const int64_t MidCoeffs_B_LP[3] = { 41814974, 83629947, 41814974 };
 const int64_t LowCoeffs_A_HP = 1070347903; //hp17 n=1
 const int64_t LowCoeffs_B_HP[2] = { 1072044923, -1072044923 };
 
-
 const int64_t LowCoeffs_A_LP[2] = { 2111633663, -1038474472 }; //lp178 30bit 
 const int64_t LowCoeffs_B_LP[3] = { 143309, 286617, 143309 };
 
@@ -69,9 +68,6 @@ int32_t lastYLow_0[4] = {0};
 int32_t lastYLow_1[4] = {0};
 
 const int shift = 30;
-uint32_t clocks[4096] = {0};
-uint64_t sum = 0;
-int it = 0;
 //int32_t max = 2147483647;          //real max: 2147418112 (3.12V). Using 2^31 - 1 (3.12V)
 
 static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restrict H_L_Buf){
@@ -105,6 +101,7 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
     lastYMid_L_1[3] = lastYMid_L_1[1]; lastYMid_L_1[2] = lastYMid_L_1[0];
     lastYLow_0[3]   = lastYLow_0[1];   lastYLow_0[2]   = lastYLow_0[0];
     lastYLow_1[3]   = lastYLow_1[1];   lastYLow_1[2]   = lastYLow_1[0];
+
 
     //-----High Calculation------//
     //--HP_203Hz--//
@@ -151,7 +148,6 @@ static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restri
 
     lastYMid_L_1[0] = ((lastYMid_L_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[2]) >> shift)
          + ((lastYMid_L_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[2] * MidCoeffs_A_LP[1]) >> shift);
-
 
 
     //-----Low Calculation------//  
@@ -249,8 +245,11 @@ static inline void IRAM_ATTR mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
 
 static i2s_chan_handle_t                tx_chan_1;
 static i2s_chan_handle_t                tx_chan_2;       
-static i2s_chan_handle_t                rx_chan;   
+static i2s_chan_handle_t                rx_chan;
 
+// uint32_t clocks[4096] = {0};
+// uint64_t sum = 0;
+// int it = 0;
 
 static inline void fiter(void *args)
 {
@@ -263,7 +262,7 @@ static inline void fiter(void *args)
 
     ESP_ERROR_CHECK(i2s_channel_enable(rx_chan));
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_1));
-    ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));
+    ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));    
 
     while (true) {
         if (i2s_channel_read(rx_chan, r_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
@@ -272,19 +271,19 @@ static inline void fiter(void *args)
             calculateY(M_Buf, H_L_Buf);
             mapOutput(M_Buf, H_L_Buf);
 
-            clocks[it] = esp_cpu_get_cycle_count() - start;
-            it++;
-            if (it == 4095)
-            {
-                for (size_t i = 1; i < 4096; i++)
-                {
-                    sum += clocks[i];
-                }
-                printf("Avg calc cycles: %llu\n", sum >> 12);
-                //printf("Avg calc cycles: %lu\n", clocks[4096]);
-                sum = 0;
-                it = 0;
-            }
+            // clocks[it] = esp_cpu_get_cycle_count() - start;
+            // it++;
+            // if (it == 4095)
+            // {
+            //     for (size_t i = 1; i < 4096; i++)
+            //     {
+            //         sum += clocks[i];
+            //     }
+            //     printf("Avg calc cycles: %llu\n", sum >> 12);
+            //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
+            //     sum = 0;
+            //     it = 0;
+            // }
 
             i2s_channel_write(tx_chan_1, M_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
             i2s_channel_write(tx_chan_2, H_L_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
@@ -456,6 +455,11 @@ const float high_Limit = 0.3;
 const float mid_Limit = 0.3;
 const float low_Limit = 0.3;
 
+// 1 -> no change; -1 -> inverting
+const int invertHigh = 1;
+const int invertMid = 1;
+const int invertLow = 1;
+
 int16_t clamp12bit(int16_t x){
     if(x >= 4095){
         return 4095;
@@ -467,6 +471,7 @@ int16_t clamp12bit(int16_t x){
         return x;
     }
 }
+
 void get_volumes(){
     int16_t mainADC = read_adc(ADC_CHANNEL_3);// Pin 14 will be changed mabye 
     int16_t highADC = read_adc(ADC_CHANNEL_2);// Pin 13
@@ -480,9 +485,9 @@ void get_volumes(){
     // printf("X: %d\n", clamp12bit(lastPotiMain_X[0]));
     // printf("Y: %d\n\n", clamp12bit(lastPotiMain_Y[0]));
     main_volume = make_exponential(clamp12bit(lastPotiMain_Y[0]));  
-    high_volume = clamp12bit(lastPotiHigh_Y[0]) * high_Limit;  
-    mid_volume = clamp12bit(lastPotiMid_Y[0]) * mid_Limit;  
-    low_volume = clamp12bit(lastPotiLow_Y[0]) * low_Limit;  
+    high_volume = clamp12bit(lastPotiHigh_Y[0]) * high_Limit * invertHigh;  
+    mid_volume = clamp12bit(lastPotiMid_Y[0]) * mid_Limit * invertMid;  
+    low_volume = clamp12bit(lastPotiLow_Y[0]) * low_Limit * invertLow;  
 
     // printf("Main: %d\n", main_volume);
 }

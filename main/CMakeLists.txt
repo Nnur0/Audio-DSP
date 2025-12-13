@@ -1,3 +1,3 @@
-idf_component_register(SRCS "i2s_std_example_main.c"
+idf_component_register(SRCS "main.c"
                     PRIV_REQUIRES esp_driver_i2s esp_driver_gpio esp_adc
                     INCLUDE_DIRS "." "C:/Users/savel/esp/v5.4/esp-idf/examples/peripherals/i2s/common")
