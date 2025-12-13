@@ -23,7 +23,7 @@
 #define DOUT_1    GPIO_NUM_46 // old: 9
 #define DOUT_2    GPIO_NUM_5 // old: 5
 
-#define EXAMPLE_BUFF_SIZE              4 * sizeof(int32_t)//64
+#define EXAMPLE_BUFF_SIZE              2 * 2 * sizeof(int32_t)//64
 #define CLOCK   48000    
 
 //-----High Coeffs------//
@@ -267,9 +267,9 @@ static inline void fiter(void *args)
     while (true) {
         if (i2s_channel_read(rx_chan, r_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
             uint32_t start = esp_cpu_get_cycle_count();
-            pushNewX(r_buf);
-            calculateY(M_Buf, H_L_Buf);
-            mapOutput(M_Buf, H_L_Buf);
+            // pushNewX(r_buf);
+            // calculateY(M_Buf, H_L_Buf);
+            // mapOutput(M_Buf, H_L_Buf);
 
             // clocks[it] = esp_cpu_get_cycle_count() - start;
             // it++;
@@ -285,8 +285,8 @@ static inline void fiter(void *args)
             //     it = 0;
             // }
 
-            i2s_channel_write(tx_chan_1, M_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
-            i2s_channel_write(tx_chan_2, H_L_Buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
+            i2s_channel_write(tx_chan_1, r_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
+            i2s_channel_write(tx_chan_2, r_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
 
             // r_buf[1] = r_buf[1] * -1;
             // r_buf[3] = r_buf[3] * -1;
