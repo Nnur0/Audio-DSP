@@ -51,202 +51,129 @@ const int64_t LowCoeffs_B_LP[3] = { 143309, 286617, 143309 };
 // a * y
 // b * x
 
-int32_t lastX_high[4] = {0};
-int32_t lastX_midR[4] = {0};
-int32_t lastX_midL[4] = {0};
-int32_t lastX_low[4] = {0};
-
-int32_t lastYHigh_0[4] = {0};
-int32_t lastYHigh_1[4] = {0};
-
-int32_t lastYMid_R_0[4] = {0};
-int32_t lastYMid_R_1[4] = {0};
-
-int32_t lastYMid_L_0[4] = {0};
-int32_t lastYMid_L_1[4] = {0};
-
-int32_t lastYLow_0[4] = {0};
-int32_t lastYLow_1[4] = {0};
-
-const int shift = 30;
-//int32_t max = 2147483647;          //real max: 2147418112 (3.12V). Using 2^31 - 1 (3.12V)
-
-static inline void IRAM_ATTR calculateY(){
-    // for (int i = 5; i >= 2; i--) {
-    //     lastYHigh_0[i] = lastYHigh_0[i - 2];
-    //     lastYHigh_1[i] = lastYHigh_1[i - 2];
-
-    //     lastYMid_R_0[i] = lastYMid_R_0[i - 2];
-    //     lastYMid_R_1[i] = lastYMid_R_1[i - 2];
-
-    //     lastYMid_L_0[i] = lastYMid_L_0[i - 2];
-    //     lastYMid_L_1[i] = lastYMid_L_1[i - 2];
-
-    //     lastYLow_0[i] = lastYLow_0[i - 2];
-    //     lastYLow_1[i] = lastYLow_1[i - 2];
-    // }
-    // memmove(&lastYHigh_0[2], &lastYHigh_0[0], 4 * sizeof(lastYHigh_0[0]));
-    // memmove(&lastYHigh_1[2], &lastYHigh_1[0], 4 * sizeof(lastYHigh_1[0]));
-    // memmove(&lastYMid_R_0[2], &lastYMid_R_0[0], 4 * sizeof(lastYMid_R_0[0]));
-    // memmove(&lastYMid_R_1[2], &lastYMid_R_1[0], 4 * sizeof(lastYMid_R_1[0]));
-    // memmove(&lastYMid_L_0[2], &lastYMid_L_0[0], 4 * sizeof(lastYMid_L_0[0]));
-    // memmove(&lastYMid_L_1[2], &lastYMid_L_1[0], 4 * sizeof(lastYMid_L_1[0]));
-    // memmove(&lastYLow_0[2],  &lastYLow_0[0],  4 * sizeof(lastYLow_0[0]));
-    // memmove(&lastYLow_1[2],  &lastYLow_1[0],  4 * sizeof(lastYLow_1[0]));
-
-    lastYHigh_0[3] = lastYHigh_0[1]; lastYHigh_0[2] = lastYHigh_0[0];
-    lastYHigh_1[3] = lastYHigh_1[1]; lastYHigh_1[2] = lastYHigh_1[0];
-    lastYMid_R_0[3] = lastYMid_R_0[1]; lastYMid_R_0[2] = lastYMid_R_0[0];
-    lastYMid_R_1[3] = lastYMid_R_1[1]; lastYMid_R_1[2] = lastYMid_R_1[0];
-    lastYMid_L_0[3] = lastYMid_L_0[1]; lastYMid_L_0[2] = lastYMid_L_0[0];
-    lastYMid_L_1[3] = lastYMid_L_1[1]; lastYMid_L_1[2] = lastYMid_L_1[0];
-    lastYLow_0[3]   = lastYLow_0[1];   lastYLow_0[2]   = lastYLow_0[0];
-    lastYLow_1[3]   = lastYLow_1[1];   lastYLow_1[2]   = lastYLow_1[0];
-
-
-    //-----High Calculation------//
-    //--HP_203Hz--//
-    lastYHigh_0[1] = ((lastX_high[1] * HighCoeffs_B_HP[0]) >> shift) + ((lastX_high[2] * HighCoeffs_B_HP[1]) >> shift) + ((lastX_high[3] * HighCoeffs_B_HP[2]) >> shift)
-         + ((lastYHigh_0[2] * HighCoeffs_A_HP[0]) >> shift) + ((lastYHigh_0[3] * HighCoeffs_A_HP[1]) >> shift);
-
-    lastYHigh_0[0] = ((lastX_high[0] * HighCoeffs_B_HP[0]) >> shift) + ((lastX_high[1] * HighCoeffs_B_HP[1]) >> shift) + ((lastX_high[2] * HighCoeffs_B_HP[2]) >> shift)
-         + ((lastYHigh_0[1] * HighCoeffs_A_HP[0]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_A_HP[1]) >> shift);
-
-    //--LP_3483Hz--//
-    lastYHigh_1[1] = ((lastYHigh_0[1] * HighCoeffs_B_LP[0]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_B_LP[1]) >> shift) + ((lastYHigh_0[3] * HighCoeffs_B_LP[2]) >> shift)
-         + ((lastYHigh_1[2] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[3] * HighCoeffs_A_LP[1]) >> shift);
-
-    lastYHigh_1[0] = ((lastYHigh_0[0] * HighCoeffs_B_LP[0]) >> shift) + ((lastYHigh_0[1] * HighCoeffs_B_LP[1]) >> shift) + ((lastYHigh_0[2] * HighCoeffs_B_LP[2]) >> shift)
-         + ((lastYHigh_1[1] * HighCoeffs_A_LP[0]) >> shift) + ((lastYHigh_1[2] * HighCoeffs_A_LP[1]) >> shift);
-
-
-    //-----Mid Calculation------//
-    //--HP_203Hz--//
-    //--Right--//
-    lastYMid_R_0[1] = ((lastX_midR[1] * MidCoeffs_B_HP[0]) >> shift) + ((lastX_midR[2] * MidCoeffs_B_HP[1]) >> shift) + ((lastX_midR[3] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_R_0[2] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_R_0[3] * MidCoeffs_A_HP[1]) >> shift);
-
-    lastYMid_R_0[0] = ((lastX_midR[0] * MidCoeffs_B_HP[0]) >> shift) + ((lastX_midR[1] * MidCoeffs_B_HP[1]) >> shift) + ((lastX_midR[2] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_R_0[1] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_A_HP[1]) >> shift);
-    //--Left--//
-    lastYMid_L_0[1] = ((lastX_midL[1] * MidCoeffs_B_HP[0]) >> shift) + ((lastX_midL[2] * MidCoeffs_B_HP[1]) >> shift) + ((lastX_midL[3] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_L_0[2] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_L_0[3] * MidCoeffs_A_HP[1]) >> shift);
-
-    lastYMid_L_0[0] = ((lastX_midL[0] * MidCoeffs_B_HP[0]) >> shift) + ((lastX_midL[1] * MidCoeffs_B_HP[1]) >> shift) + ((lastX_midL[2] * MidCoeffs_B_HP[2]) >> shift)
-         + ((lastYMid_L_0[1] * MidCoeffs_A_HP[0]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_A_HP[1]) >> shift);
-
-
-    //--LP_3483Hz--//
-    //--Right--//
-    lastYMid_R_1[1] = ((lastYMid_R_0[1] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_R_0[3] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_R_1[2] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_R_1[3] * MidCoeffs_A_LP[1]) >> shift);
-
-    lastYMid_R_1[0] = ((lastYMid_R_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_R_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_R_0[2] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_R_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_R_1[2] * MidCoeffs_A_LP[1]) >> shift);
-    //--Left--//
-    lastYMid_L_1[1] = ((lastYMid_L_0[1] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[3] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_L_1[2] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[3] * MidCoeffs_A_LP[1]) >> shift);
-
-    lastYMid_L_1[0] = ((lastYMid_L_0[0] * MidCoeffs_B_LP[0]) >> shift) + ((lastYMid_L_0[1] * MidCoeffs_B_LP[1]) >> shift) + ((lastYMid_L_0[2] * MidCoeffs_B_LP[2]) >> shift)
-         + ((lastYMid_L_1[1] * MidCoeffs_A_LP[0]) >> shift) + ((lastYMid_L_1[2] * MidCoeffs_A_LP[1]) >> shift);
-
-
-    //-----Low Calculation------//  
-    lastYLow_0[1] = ((lastX_low[1] * LowCoeffs_B_HP[0]) >> shift) + ((lastX_low[2] * LowCoeffs_B_HP[1]) >> shift)
-         + ((lastYLow_0[2] * LowCoeffs_A_HP) >> shift);
-
-    lastYLow_0[0] = ((lastX_low[0] * LowCoeffs_B_HP[0]) >> shift) + ((lastX_low[1] * LowCoeffs_B_HP[1]) >> shift)
-         + ((lastYLow_0[1] * LowCoeffs_A_HP) >> shift);
-
-    //--LP_178Hz--//
-    lastYLow_1[1] = ((lastYLow_0[1] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[3] * LowCoeffs_B_LP[2]) >> shift)
-         + ((lastYLow_1[2] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[3] * LowCoeffs_A_LP[1]) >> shift);
-
-    lastYLow_1[0] = ((lastYLow_0[0] * LowCoeffs_B_LP[0]) >> shift) + ((lastYLow_0[1] * LowCoeffs_B_LP[1]) >> shift) + ((lastYLow_0[2] * LowCoeffs_B_LP[2]) >> shift)
-         + ((lastYLow_1[1] * LowCoeffs_A_LP[0]) >> shift) + ((lastYLow_1[2] * LowCoeffs_A_LP[1]) >> shift);
-
-
-    // lastYLow_1[0] = lastX_low[0];
-    // lastYLow_1[1] = lastX_low[1];
-
-    // lastYMid_R_1[0] = lastX_midR[0];
-    // lastYMid_R_1[1] = lastX_midR[1];
-
-    // lastYMid_L_1[0] = lastX_midL[0];
-    // lastYMid_L_1[1] = lastX_midL[1];
-
-    // lastYHigh_1[0] = lastX_high[0];
-    // lastYHigh_1[1] = lastX_high[1];
-}
-
 int16_t main_volume;
 int16_t high_volume;
 int16_t mid_volume;
 int16_t low_volume;
 
+#define Q_SHIFT 30
 
+typedef struct {
+    int32_t x1, x2;
+    int32_t y1, y2;
+} biquad_state_t;
 
-static inline void IRAM_ATTR pushNewX(int32_t *in_buf){ // clocks: 954, wenn filter funktion auskommentiert
-    int32_t *X_high = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    int32_t *X_mid_R = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    int32_t *X_mid_L = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
-    int32_t *X_low = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+typedef struct {
+    int32_t x1;
+    int32_t y1;
+} iir1_state_t;
 
-    for (size_t i = 0; i < samples*2; i+=2)
-    {
-        int32_t L = in_buf[i];
-        int32_t R = in_buf[i + 1];
+// ---- High band ----
+static biquad_state_t high_hp;
+static biquad_state_t high_lp;
 
-        int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-        int64_t left  = ((int64_t)L * main_volume) >> 12;
-        int64_t right = ((int64_t)R * main_volume) >> 12;
+// ---- Mid band ----
+static biquad_state_t midR_hp;
+static biquad_state_t midR_lp;
+static biquad_state_t midL_hp;
+static biquad_state_t midL_lp;
 
-        X_high[i] = (int32_t)((mono  * high_volume) >> 12);
-        lastX_low[1]  = (int32_t)((mono  * low_volume)  >> 12);
-        lastX_midL[1] = (int32_t)((left  * mid_volume)  >> 12);
-        lastX_midR[1] = (int32_t)((right * mid_volume)  >> 12);
-    }
-    
-    // {
-    //     int32_t L = newSample[0];
-    //     int32_t R = newSample[1];
+// ---- Low band ----
+static iir1_state_t  low_hp;   // 1st order HP @17Hz
+static biquad_state_t low_lp;  // 2nd order LP
 
-    //     int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-    //     int64_t left  = ((int64_t)L * main_volume) >> 12;
-    //     int64_t right = ((int64_t)R * main_volume) >> 12;
+static inline int32_t IRAM_ATTR biquad_process(
+    biquad_state_t *s,
+    int32_t x,
+    const int64_t *B,   // B[3]
+    const int64_t *A    // A[2]
+) {
+    int64_t y =
+        (int64_t)x     * B[0] +
+        (int64_t)s->x1 * B[1] +
+        (int64_t)s->x2 * B[2] +
+        (int64_t)s->y1 * A[0] +
+        (int64_t)s->y2 * A[1];
 
-    //     lastX_high[1] = (int32_t)((mono  * high_volume) >> 12);
-    //     lastX_low[1]  = (int32_t)((mono  * low_volume)  >> 12);
-    //     lastX_midL[1] = (int32_t)((left  * mid_volume)  >> 12);
-    //     lastX_midR[1] = (int32_t)((right * mid_volume)  >> 12);
-    // }
+    y >>= Q_SHIFT;
 
-    // {
-    //     int32_t L = newSample[3];
-    //     int32_t R = newSample[2];
+    s->x2 = s->x1;
+    s->x1 = x;
+    s->y2 = s->y1;
+    s->y1 = (int32_t)y;
 
-    //     int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-    //     int64_t left  = ((int64_t)L * main_volume) >> 12;
-    //     int64_t right = ((int64_t)R * main_volume) >> 12;
-
-    //     lastX_high[0] = (int32_t)((mono  * high_volume) >> 12);
-    //     lastX_low[0]  = (int32_t)((mono  * low_volume)  >> 12);
-    //     lastX_midL[0] = (int32_t)((left  * mid_volume)  >> 12);
-    //     lastX_midR[0] = (int32_t)((right * mid_volume) >> 12);
-    // }
+    return (int32_t)y;
 }
 
+static inline int32_t IRAM_ATTR iir1_process(
+    iir1_state_t *s,
+    int32_t x,
+    const int64_t *B,   // B[2]
+    int64_t A           // scalar
+) {
+    int64_t y =
+        (int64_t)x     * B[0] +
+        (int64_t)s->x1 * B[1] +
+        (int64_t)s->y1 * A;
 
-static inline void IRAM_ATTR mapOutput(int32_t *M_Buf, int32_t *H_L_Buf){
-    H_L_Buf[0] = (int32_t)lastYHigh_1[1];
-    M_Buf[0] = (int32_t)lastYMid_R_1[1];
-    M_Buf[1] = (int32_t)lastYMid_L_1[1];
-    H_L_Buf[1] = (int32_t)lastYLow_1[1];
+    y >>= Q_SHIFT;
 
-    H_L_Buf[2] = (int32_t)lastYHigh_1[0];
-    M_Buf[2] = (int32_t)lastYMid_R_1[0];
-    M_Buf[3] = (int32_t)lastYMid_L_1[0];
-    H_L_Buf[3] = (int32_t)lastYLow_1[0];
+    s->x1 = x;
+    s->y1 = (int32_t)y;
+
+    return (int32_t)y;
+}
+
+static inline void IRAM_ATTR process_block(
+    const int32_t *in_buf,
+    int32_t *M_Buf,
+    int32_t *H_L_Buf,
+    size_t frames
+) {
+    for (size_t i = 0; i < frames; i++) {
+
+        int32_t L = in_buf[2*i];
+        int32_t R = in_buf[2*i + 1];
+
+        // ---- Volume ----
+        int64_t mono = ((int64_t)L + R) >> 1;
+        mono = (mono * main_volume) >> 12;
+
+        int32_t midL = ((int64_t)L * mid_volume) >> 12;
+        int32_t midR = ((int64_t)R * mid_volume) >> 12;
+        int32_t high = (mono * high_volume) >> 12;
+        int32_t low  = (mono * low_volume)  >> 12;
+
+        // ---- High band ----
+        int32_t h = biquad_process(&high_hp, high,
+                                   HighCoeffs_B_HP, HighCoeffs_A_HP);
+        h = biquad_process(&high_lp, h,
+                           HighCoeffs_B_LP, HighCoeffs_A_LP);
+
+        // ---- Mid band ----
+        int32_t mR = biquad_process(&midR_hp, midR,
+                                    MidCoeffs_B_HP, MidCoeffs_A_HP);
+        mR = biquad_process(&midR_lp, mR,
+                            MidCoeffs_B_LP, MidCoeffs_A_LP);
+
+        int32_t mL = biquad_process(&midL_hp, midL,
+                                    MidCoeffs_B_HP, MidCoeffs_A_HP);
+        mL = biquad_process(&midL_lp, mL,
+                            MidCoeffs_B_LP, MidCoeffs_A_LP);
+
+        // ---- Low band ----
+        int32_t l = iir1_process(&low_hp, low,
+                                 LowCoeffs_B_HP, LowCoeffs_A_HP);
+        l = biquad_process(&low_lp, l,
+                           LowCoeffs_B_LP, LowCoeffs_A_LP);
+
+        // ---- OUTPUT MAPPING ----
+        M_Buf[2*i]     = mL;
+        M_Buf[2*i + 1] = mR;
+
+        H_L_Buf[2*i]     = h;
+        H_L_Buf[2*i + 1] = l;
+    }
 }
 
 
@@ -254,9 +181,9 @@ static i2s_chan_handle_t                tx_chan_1;
 static i2s_chan_handle_t                tx_chan_2;       
 static i2s_chan_handle_t                rx_chan;
 
-// uint32_t clocks[4096] = {0};
-// uint64_t sum = 0;
-// int it = 0;
+uint32_t clocks[4096] = {0};
+uint64_t sum = 0;
+int it = 0;
 
 static inline void fiter(void *args)
 {
@@ -273,28 +200,34 @@ static inline void fiter(void *args)
 
     while (true) {
         if (i2s_channel_read(rx_chan, in_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 10) == ESP_OK) {
+            uint32_t start = esp_cpu_get_cycle_count();
             if (r_bytes != EXAMPLE_BUFF_SIZE) printf("Bytes: %d\n", r_bytes);
+            size_t frames = r_bytes / (2 * sizeof(int32_t));
+            process_block(in_buf, M_Buf, H_L_Buf, frames);
+
+            i2s_channel_write(tx_chan_1, M_Buf, r_bytes, &w_bytes, portMAX_DELAY);
+            i2s_channel_write(tx_chan_2, H_L_Buf, r_bytes, &w_bytes, portMAX_DELAY);
             
-            // uint32_t start = esp_cpu_get_cycle_count();
+            
             // pushNewX(in_buf);
             // calculateY(M_Buf, H_L_Buf);
             // mapOutput(M_Buf, H_L_Buf);
 
-            // clocks[it] = esp_cpu_get_cycle_count() - start;
-            // it++;
-            // if (it == 4095)
-            // {
-            //     for (size_t i = 1; i < 4096; i++)
-            //     {
-            //         sum += clocks[i];
-            //     }
-            //     printf("Avg calc cycles: %llu\n", sum >> 12);
-            //     //printf("Avg calc cycles: %lu\n", clocks[4096]);
-            //     sum = 0;
-            //     it = 0;
-            // }
+            clocks[it] = esp_cpu_get_cycle_count() - start;
+            it++;
+            if (it == 1023)
+            {
+                for (size_t i = 0; i < 1024; i++)
+                {
+                    sum += clocks[i];
+                }
+                printf("Avg calc cycles: %llu\n", sum >> 10);
+                //printf("Avg calc cycles: %lu\n", clocks[4096]);
+                sum = 0;
+                it = 0;
+            }
 
-            i2s_channel_write(tx_chan_1, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 10); // <---- M_buf
+            //i2s_channel_write(tx_chan_1, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 10); // <---- M_buf
             //i2s_channel_write(tx_chan_2, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
 
             // in_buf[1] = in_buf[1] * -1;
