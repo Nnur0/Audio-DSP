@@ -23,7 +23,8 @@
 #define DOUT_1    GPIO_NUM_46 // old: 9
 #define DOUT_2    GPIO_NUM_5 // old: 5
 
-#define EXAMPLE_BUFF_SIZE              2 * 2 * sizeof(int32_t)//64
+#define samples 240
+#define EXAMPLE_BUFF_SIZE              samples * 2 * sizeof(int32_t)//64
 #define CLOCK   48000    
 
 //-----High Coeffs------//
@@ -70,7 +71,7 @@ int32_t lastYLow_1[4] = {0};
 const int shift = 30;
 //int32_t max = 2147483647;          //real max: 2147418112 (3.12V). Using 2^31 - 1 (3.12V)
 
-static inline void IRAM_ATTR calculateY(int32_t *restrict M_Buf, int32_t *restrict H_L_Buf){
+static inline void IRAM_ATTR calculateY(){
     // for (int i = 5; i >= 2; i--) {
     //     lastYHigh_0[i] = lastYHigh_0[i - 2];
     //     lastYHigh_1[i] = lastYHigh_1[i - 2];
@@ -183,50 +184,56 @@ int16_t high_volume;
 int16_t mid_volume;
 int16_t low_volume;
 
-static inline void IRAM_ATTR pushNewX(int32_t *newSample){ // clocks: 954, wenn filter funktion auskommentiert
-    // for (int i = 5; i >= 2; --i) {
-    //     lastX_high[i] = lastX_high[i-2];
-    //     lastX_midR[i] = lastX_midR[i-2];
-    //     lastX_midL[i] = lastX_midL[i-2];
-    //     lastX_low[i]  = lastX_low[i-2];
-    // }
-    // memmove(&lastX_high[2], &lastX_high[0], 4 * sizeof(lastX_high[0]));
-    // memmove(&lastX_midR[2], &lastX_midR[0], 4 * sizeof(lastX_midR[0]));
-    // memmove(&lastX_midL[2], &lastX_midL[0], 4 * sizeof(lastX_midL[0]));
-    // memmove(&lastX_low[2],  &lastX_low[0],  4 * sizeof(lastX_low[0]));
 
-    lastX_high[3] = lastX_high[1]; lastX_high[2] = lastX_high[0];
-    lastX_midR[3] = lastX_midR[1]; lastX_midR[2] = lastX_midR[0];
-    lastX_midL[3] = lastX_midL[1]; lastX_midL[2] = lastX_midL[0];
-    lastX_low[3]  = lastX_low[1];  lastX_low[2]  = lastX_low[0];
 
+static inline void IRAM_ATTR pushNewX(int32_t *in_buf){ // clocks: 954, wenn filter funktion auskommentiert
+    int32_t *X_high = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *X_mid_R = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *X_mid_L = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *X_low = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+
+    for (size_t i = 0; i < samples*2; i+=2)
     {
-        int32_t L = newSample[0];
-        int32_t R = newSample[1];
+        int32_t L = in_buf[i];
+        int32_t R = in_buf[i + 1];
 
         int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
         int64_t left  = ((int64_t)L * main_volume) >> 12;
         int64_t right = ((int64_t)R * main_volume) >> 12;
 
-        lastX_high[1] = (int32_t)((mono  * high_volume) >> 12);
+        X_high[i] = (int32_t)((mono  * high_volume) >> 12);
         lastX_low[1]  = (int32_t)((mono  * low_volume)  >> 12);
         lastX_midL[1] = (int32_t)((left  * mid_volume)  >> 12);
         lastX_midR[1] = (int32_t)((right * mid_volume)  >> 12);
     }
+    
+    // {
+    //     int32_t L = newSample[0];
+    //     int32_t R = newSample[1];
 
-    {
-        int32_t L = newSample[3];
-        int32_t R = newSample[2];
+    //     int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
+    //     int64_t left  = ((int64_t)L * main_volume) >> 12;
+    //     int64_t right = ((int64_t)R * main_volume) >> 12;
 
-        int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
-        int64_t left  = ((int64_t)L * main_volume) >> 12;
-        int64_t right = ((int64_t)R * main_volume) >> 12;
+    //     lastX_high[1] = (int32_t)((mono  * high_volume) >> 12);
+    //     lastX_low[1]  = (int32_t)((mono  * low_volume)  >> 12);
+    //     lastX_midL[1] = (int32_t)((left  * mid_volume)  >> 12);
+    //     lastX_midR[1] = (int32_t)((right * mid_volume)  >> 12);
+    // }
 
-        lastX_high[0] = (int32_t)((mono  * high_volume) >> 12);
-        lastX_low[0]  = (int32_t)((mono  * low_volume)  >> 12);
-        lastX_midL[0] = (int32_t)((left  * mid_volume)  >> 12);
-        lastX_midR[0] = (int32_t)((right * mid_volume) >> 12);
-    }
+    // {
+    //     int32_t L = newSample[3];
+    //     int32_t R = newSample[2];
+
+    //     int64_t mono  = ((((int64_t)L + (int64_t)R) >> 1) * main_volume) >> 12;
+    //     int64_t left  = ((int64_t)L * main_volume) >> 12;
+    //     int64_t right = ((int64_t)R * main_volume) >> 12;
+
+    //     lastX_high[0] = (int32_t)((mono  * high_volume) >> 12);
+    //     lastX_low[0]  = (int32_t)((mono  * low_volume)  >> 12);
+    //     lastX_midL[0] = (int32_t)((left  * mid_volume)  >> 12);
+    //     lastX_midR[0] = (int32_t)((right * mid_volume) >> 12);
+    // }
 }
 
 
@@ -253,7 +260,7 @@ static i2s_chan_handle_t                rx_chan;
 
 static inline void fiter(void *args)
 {
-    int32_t *r_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *in_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *M_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *H_L_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     
@@ -265,9 +272,11 @@ static inline void fiter(void *args)
     ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));    
 
     while (true) {
-        if (i2s_channel_read(rx_chan, r_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 1000) == ESP_OK) {
-            uint32_t start = esp_cpu_get_cycle_count();
-            // pushNewX(r_buf);
+        if (i2s_channel_read(rx_chan, in_buf, EXAMPLE_BUFF_SIZE, &r_bytes, 10) == ESP_OK) {
+            if (r_bytes != EXAMPLE_BUFF_SIZE) printf("Bytes: %d\n", r_bytes);
+            
+            // uint32_t start = esp_cpu_get_cycle_count();
+            // pushNewX(in_buf);
             // calculateY(M_Buf, H_L_Buf);
             // mapOutput(M_Buf, H_L_Buf);
 
@@ -285,14 +294,14 @@ static inline void fiter(void *args)
             //     it = 0;
             // }
 
-            i2s_channel_write(tx_chan_1, r_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
-            i2s_channel_write(tx_chan_2, r_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
+            i2s_channel_write(tx_chan_1, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 10); // <---- M_buf
+            //i2s_channel_write(tx_chan_2, in_buf, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
 
-            // r_buf[1] = r_buf[1] * -1;
-            // r_buf[3] = r_buf[3] * -1;
+            // in_buf[1] = in_buf[1] * -1;
+            // in_buf[3] = in_buf[3] * -1;
             
-            // memcpy(w_buf1, r_buf, EXAMPLE_BUFF_SIZE);
-            // memcpy(w_buf2, r_buf, EXAMPLE_BUFF_SIZE);
+            // memcpy(w_buf1, in_buf, EXAMPLE_BUFF_SIZE);
+            // memcpy(w_buf2, in_buf, EXAMPLE_BUFF_SIZE);
             // i2s_channel_write(tx_chan_1, w_buf1, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
             // i2s_channel_write(tx_chan_2, w_buf2, EXAMPLE_BUFF_SIZE, &w_bytes, 1000);
         } 
@@ -301,7 +310,7 @@ static inline void fiter(void *args)
         }
         //vTaskDelay(pdMS_TO_TICKS(200));
     }
-    free(r_buf);
+    free(in_buf);
     free(M_Buf);
     free(H_L_Buf);
     vTaskDelete(NULL);
