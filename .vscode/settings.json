@@ -1,25 +1,26 @@
 {
-    "C_Cpp.intelliSenseEngine": "default",
-    "idf.espIdfPathWin": "C:\\Users\\savel\\esp\\v5.4\\esp-idf",
-    "idf.pythonInstallPath": "C:\\Users\\savel\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
-    "idf.openOcdConfigs": [
-        "board/esp32s3-builtin.cfg"
-    ],
-    "idf.portWin": "COM7",
-    "idf.toolsPathWin": "C:\\Users\\savel\\.espressif",
-    "idf.customExtraVars": {
-        "IDF_TARGET": "esp32s3"
-    },
-    "files.associations": {
-        "freertos.h": "c",
-        "esp_mac.h": "c",
-        "task.h": "c",
-        "esp_check.h": "c",
-        "sdkconfig.h": "c",
-        "adc_oneshot.h": "c",
-        "compare": "c",
-        "cstdint": "c",
-        "adc_cali.h": "c"
-    },
-    "idf.flashType": "UART"
+  "C_Cpp.intelliSenseEngine": "default",
+  "idf.espIdfPathWin": "C:\\Users\\savel\\esp\\v5.4\\esp-idf",
+  "idf.pythonInstallPath": "C:\\Users\\savel\\.espressif\\tools\\idf-python\\3.11.2\\python.exe",
+  "idf.openOcdConfigs": [
+    "board/esp32s3-builtin.cfg"
+  ],
+  "idf.portWin": "COM9",
+  "idf.toolsPathWin": "C:\\Users\\savel\\.espressif",
+  "idf.customExtraVars": {
+    "IDF_TARGET": "esp32s3"
+  },
+  "files.associations": {
+    "freertos.h": "c",
+    "esp_mac.h": "c",
+    "task.h": "c",
+    "esp_check.h": "c",
+    "sdkconfig.h": "c",
+    "adc_oneshot.h": "c",
+    "compare": "c",
+    "cstdint": "c",
+    "adc_cali.h": "c"
+  },
+  "idf.flashType": "UART",
+  "idf.currentSetup": "C:\\Users\\savel\\esp\\v5.4\\esp-idf"
 }
