@@ -155,7 +155,7 @@ uint32_t clocks[4096] = {0};
 uint64_t sum = 0;
 int it = 0;
 
-void filter(void *args)
+void filter_old(void *args)
 {
     int32_t *in_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
     int32_t *M_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);

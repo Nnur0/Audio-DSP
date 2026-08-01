@@ -20,7 +20,8 @@
 #include "driver/i2s_std.h"
 #include "freertos/ringbuf.h"
 
-#include "AudioComponents.h"
+#include "../filter.h"
+#include "../i2s.h"
 
 #ifndef min
 #define min(a, b) ((a) < (b) ? (a) : (b))
@@ -145,26 +146,36 @@ static void bt_i2s_task_handler(void *arg)
     uint8_t *data = NULL;
     size_t item_size = 0;
 
+    int32_t *in_buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *M_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+    int32_t *H_L_Buf = (int32_t *)malloc(EXAMPLE_BUFF_SIZE);
+
+    ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_1));
+    ESP_ERROR_CHECK(i2s_channel_enable(tx_chan_2));
+
+    size_t w_bytes = 0;
+
     for (;;)
     {
         data = (uint8_t *)xRingbufferReceive(s_ringbuf_i2s, &item_size, (TickType_t)portMAX_DELAY);
         if (item_size != 0)
         {
-            /**
-             *  IMPORTANT: this is the interface between the bluetooth library by Espressif and the rest of the SpatialAudioESP project
-             */
+            // todo data to in_buf
+            int16_t *src = (int16_t *)data;
+            size_t frames = item_size / (2 * sizeof(int16_t));
 
-            /**
-             *  set up all sample buffers to be used by I2S
-             *    -> channel specific volume level calculations 
-             *    -> channel specific delay processing 
-             */
-            setupAllChannelSampleBuffers(data, item_size);
+            for (size_t i = 0; i < frames * 2; i++)
+            {
+                in_buf[i] = ((int32_t)src[i]) << 16;
+            }
 
-            /**
-             *  write the sample buffers, created in the step before, to the I2S ports
-             */
-            writeChannelPairBufferToI2SPort(data, item_size, s_ringbuf_i2s);
+
+            process_block(in_buf, M_Buf, H_L_Buf, frames);
+            
+            size_t out_bytes = frames * 2 * sizeof(int32_t);
+
+            i2s_channel_write(tx_chan_1, M_Buf, out_bytes, &w_bytes, portMAX_DELAY);
+            i2s_channel_write(tx_chan_2, H_L_Buf, out_bytes, &w_bytes, portMAX_DELAY);
         }
     }
 }

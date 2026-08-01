@@ -9,8 +9,8 @@ idf_component_register(
         "Bluetooth/SetupBluetooth.c"
                     
     PRIV_REQUIRES 
-        bt bt_app_core_utils bredr_app_common_utils
-        a2dp_sink_common_utils
+        bt #bredr_app_common_utils #bt_app_core_utils
+        #a2dp_sink_common_utils
         nvs_flash driver
         ${EXTRA_COMPONENTS}
 

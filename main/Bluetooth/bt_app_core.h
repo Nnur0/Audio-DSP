@@ -14,7 +14,7 @@
 #include <stdio.h>
 
 // signal processing and i2s channel write commands
-#include "SignalProcessing.h"
+// #include "SignalProcessing.h"
 
 #define BT_APP_CORE_TAG                   "BT_APP_CORE"
 

@@ -109,7 +109,11 @@ void initBluetooth()
     ESP_ERROR_CHECK(err);
 
     // check
-    ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BLE));
+    //ESP_ERROR_CHECK(esp_bt_controller_mem_release(ESP_BT_MODE_BLE));
+    // esp_err_t err2;
+
+    // err2 = esp_bt_controller_mem_release(ESP_BT_MODE_BLE);
+    // ESP_LOGI(BT_AV_TAG, "mem_release = %s", esp_err_to_name(err2));
 
     // check
     esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
